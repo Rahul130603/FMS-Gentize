@@ -1,0 +1,5 @@
+node_modules/
+.env
+src/uploads/technical-queries/*
+!src/uploads/technical-queries/.gitkeep
+npm-debug.log*

@@ -11,6 +11,18 @@ import {
 } from '../types/feedback';
 import { INITIAL_FEEDBACK } from '../data/initialFeedback';
 import { useToast } from './ToastContext';
+import { removeUploadedFile } from '../utils/fileStorage';
+
+export const normalizeCategory = (cat?: string): FeedbackCategory => {
+  if (cat === 'Scanning' || cat === 'POD' || cat === 'EPDF' || cat === 'Accessibility') {
+    return cat;
+  }
+  const lower = (cat || '').toLowerCase();
+  if (lower.includes('scan')) return 'Scanning';
+  if (lower.includes('pod') || lower.includes('print')) return 'POD';
+  if (lower.includes('access')) return 'Accessibility';
+  return 'EPDF';
+};
 
 interface FeedbackContextType {
   feedback: InternalFeedbackItem[];
@@ -69,7 +81,7 @@ const initialFilters: FeedbackFilters = {
 
 const FeedbackContext = createContext<FeedbackContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'pubvantage_internal_feedback_v3';
+const STORAGE_KEY = 'pubvantage_internal_feedback_v6';
 
 export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { addToast } = useToast();
@@ -77,10 +89,38 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [feedback, setFeedback] = useState<InternalFeedbackItem[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved) as InternalFeedbackItem[];
+        return parsed.map((item) => ({
+          ...item,
+          category: normalizeCategory(item.category),
+          rootCause: item.rootCause || (item as any).problemCurrentExperience || item.description || '',
+          preventiveAction: item.preventiveAction || (item as any).suggestedImprovement || '',
+          correctiveAction: item.correctiveAction || item.suggestedSolution || (item as any).suggestedImprovement || '',
+          attachments: (item.attachments || []).map((att) => {
+            const isInitialSample = INITIAL_FEEDBACK.some((f) => f.attachments?.some((fa) => fa.id === att.id));
+            const safeSource = isInitialSample ? 'sample' : (att.source || 'upload');
+            // Clean any legacy synthetic fileData so it never interferes with real files
+            const safeFileData = att.fileData && (att.fileData.includes('PubVantage') || att.fileData.includes('Automated%20PDF') || att.fileData.includes('JVBERi0xLjQKMSAwIG9iajw8L1R5cGU'))
+              ? undefined
+              : att.fileData;
+            return {
+              ...att,
+              source: safeSource,
+              fileData: safeFileData,
+              storageKey: att.storageKey,
+              fileId: att.fileId || att.id
+            };
+          })
+        }));
+      }
 
-      // Upgrade from v2: preserve user feedback while updating sample attachment static URLs
-      const prevSaved = localStorage.getItem('pubvantage_internal_feedback_v2');
+      // Upgrade from prior versions: preserve user-submitted feedback while updating sample records with consistent metadata
+      const prevSaved =
+        localStorage.getItem('pubvantage_internal_feedback_v5') ||
+        localStorage.getItem('pubvantage_internal_feedback_v4') ||
+        localStorage.getItem('pubvantage_internal_feedback_v3') ||
+        localStorage.getItem('pubvantage_internal_feedback_v2');
       if (prevSaved) {
         const parsed = JSON.parse(prevSaved) as InternalFeedbackItem[];
         const initialMap = new Map(INITIAL_FEEDBACK.map((f) => [f.id, f]));
@@ -89,10 +129,30 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           if (sample) {
             return {
               ...item,
-              attachments: sample.attachments
+              category: sample.category,
+              attachments: sample.attachments,
+              submittedBy: sample.submittedBy,
+              team: sample.team,
+              priority: sample.priority,
+              owner: sample.owner,
+              rootCause: sample.rootCause,
+              preventiveAction: sample.preventiveAction,
+              correctiveAction: sample.correctiveAction
             };
           }
-          return item;
+          return {
+            ...item,
+            category: normalizeCategory(item.category),
+            rootCause: item.rootCause || (item as any).problemCurrentExperience || item.description || '',
+            preventiveAction: item.preventiveAction || (item as any).suggestedImprovement || '',
+            correctiveAction: item.correctiveAction || item.suggestedSolution || (item as any).suggestedImprovement || '',
+            attachments: (item.attachments || []).map((att) => ({
+              ...att,
+              source: att.source || 'upload',
+              storageKey: att.storageKey,
+              fileId: att.fileId || att.id
+            }))
+          };
         });
         return merged;
       }
@@ -109,10 +169,30 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [page, setPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(10);
 
-  // Sync to localStorage
+  // Sync to localStorage without overflowing quota (actual binary files stored in IndexedDB)
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(feedback));
+      const sanitizedFeedback = feedback.map((item) => ({
+        ...item,
+        category: normalizeCategory(item.category),
+        attachments: (item.attachments || []).map((att) => {
+          const isInitialSample = INITIAL_FEEDBACK.some((f) => f.attachments?.some((fa) => fa.id === att.id));
+          const isUpload = att.source === 'upload' || (!isInitialSample && att.source !== 'sample');
+          if (isUpload) {
+            const { file, ...rest } = att;
+            const safeFileData = att.fileData && !att.fileData.includes('PubVantage') && att.fileData.length < 100000 ? att.fileData : undefined;
+            return {
+              ...rest,
+              fileData: safeFileData,
+              source: 'upload' as const,
+              storageKey: att.storageKey,
+              fileId: att.fileId || att.id
+            };
+          }
+          return att;
+        })
+      }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(sanitizedFeedback));
     } catch (e) {
       console.error('Failed to save feedback to localStorage:', e);
     }
@@ -209,11 +289,25 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           const matchTitle = item.title.toLowerCase().includes(query);
           const matchDesc = item.description.toLowerCase().includes(query);
           const matchCategory = item.category.toLowerCase().includes(query);
-          const matchModule = item.relatedModule.toLowerCase().includes(query);
+          const matchModule = item.relatedModule ? item.relatedModule.toLowerCase().includes(query) : false;
           const matchSubmitter = item.submittedBy.toLowerCase().includes(query);
           const matchBook = item.relatedBook ? item.relatedBook.toLowerCase().includes(query) : false;
+          const matchRootCause = item.rootCause ? item.rootCause.toLowerCase().includes(query) : false;
+          const matchPreventive = item.preventiveAction ? item.preventiveAction.toLowerCase().includes(query) : false;
+          const matchCorrective = item.correctiveAction ? item.correctiveAction.toLowerCase().includes(query) : false;
 
-          if (!matchId && !matchTitle && !matchDesc && !matchCategory && !matchModule && !matchSubmitter && !matchBook) {
+          if (
+            !matchId &&
+            !matchTitle &&
+            !matchDesc &&
+            !matchCategory &&
+            !matchModule &&
+            !matchSubmitter &&
+            !matchBook &&
+            !matchRootCause &&
+            !matchPreventive &&
+            !matchCorrective
+          ) {
             return false;
           }
         }
@@ -283,37 +377,44 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const newId = `FDB-00${maxNum + 1}`;
     const formattedTimestamp = '2026-09-05 09:35';
 
+    const rootCause = itemData.rootCause || itemData.problemCurrentExperience || '';
+    const preventiveAction = itemData.preventiveAction || itemData.suggestedImprovement || '';
+    const correctiveAction = itemData.correctiveAction || itemData.suggestedSolution || itemData.suggestedImprovement || '';
+
     const newFeedback: InternalFeedbackItem = {
       id: newId,
       type: itemData.type || 'Suggestion',
       title: itemData.title || 'Untitled Feedback',
-      description: itemData.description || '',
-      category: itemData.category || 'EPUB Production',
+      description: rootCause || itemData.description || itemData.title || '',
+      category: normalizeCategory(itemData.category),
       relatedModule: itemData.relatedModule || 'EPUB Compiler',
       relatedBook: itemData.relatedBook || undefined,
-      problemCurrentExperience: itemData.problemCurrentExperience || '',
-      suggestedImprovement: itemData.suggestedImprovement || '',
-      expectedBenefit: itemData.expectedBenefit || '',
-      whoIsAffected: itemData.whoIsAffected || 'Publishing & QA teams',
-      frequency: itemData.frequency || 'Daily',
-      productionImpact: itemData.productionImpact || 'Medium',
+      rootCause,
+      preventiveAction,
+      correctiveAction,
+      problemCurrentExperience: rootCause,
+      suggestedImprovement: preventiveAction,
+      expectedBenefit: itemData.expectedBenefit || undefined,
+      whoIsAffected: itemData.whoIsAffected || undefined,
+      frequency: itemData.frequency || undefined,
+      productionImpact: itemData.productionImpact || undefined,
       priority: itemData.priority || 'Medium',
-      suggestedSolution: itemData.suggestedSolution || '',
+      suggestedSolution: correctiveAction,
       attachments: itemData.attachments || [],
-      submittedBy: itemData.submittedBy || 'Current User',
+      submittedBy: itemData.submittedBy || 'Priya S.',
       submittedDate: '2026-09-05',
-      team: itemData.team || 'Production Team',
-      assignedTo: itemData.assignedTo || undefined,
-      owner: itemData.owner || undefined,
+      team: itemData.team || 'Accessibility Team',
+      assignedTo: itemData.owner || itemData.assignedTo || 'Arun K.',
+      owner: itemData.owner || 'Arun K.',
       status: 'New',
       targetDate: itemData.targetDate || undefined,
       timeline: [
         {
           id: `ftl-${Date.now()}`,
           timestamp: formattedTimestamp,
-          title: `Feedback submitted by ${itemData.submittedBy || 'Current User'}`,
-          user: itemData.submittedBy || 'Current User',
-          role: itemData.team || 'Production Team',
+          title: `Feedback submitted by ${itemData.submittedBy || 'Priya S.'}`,
+          user: itemData.submittedBy || 'Priya S.',
+          role: itemData.team || 'Accessibility Team',
           details: 'Initial submission logged in idea portal.',
           type: 'submit'
         }
@@ -330,7 +431,8 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setFeedback((prev) =>
       prev.map((item) => {
         if (item.id === id) {
-          return { ...item, ...updates };
+          const updatedCategory = updates.category ? normalizeCategory(updates.category) : item.category;
+          return { ...item, ...updates, category: updatedCategory };
         }
         return item;
       })
@@ -474,12 +576,22 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [addToast]);
 
   const deleteFeedback = useCallback((id: string) => {
+    const itemToDelete = feedback.find((item) => item.id === id);
+    if (itemToDelete?.attachments) {
+      itemToDelete.attachments.forEach((att) => {
+        if (att.source === 'upload') {
+          if (att.id) removeUploadedFile(att.id);
+          if (att.storageKey) removeUploadedFile(att.storageKey);
+          if (att.fileId) removeUploadedFile(att.fileId);
+        }
+      });
+    }
     setFeedback((prev) => prev.filter((item) => item.id !== id));
     if (selectedFeedback?.id === id) {
       setSelectedFeedbackState(null);
     }
     addToast('Feedback deleted.', `${id} has been removed.`, 'info');
-  }, [selectedFeedback, addToast]);
+  }, [feedback, selectedFeedback, addToast]);
 
   return (
     <FeedbackContext.Provider

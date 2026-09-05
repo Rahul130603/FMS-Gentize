@@ -17,18 +17,10 @@ export type FeedbackType =
   | 'Usability Feedback';
 
 export type FeedbackCategory =
-  | 'Tool / UI'
-  | 'Workflow'
-  | 'EPUB Production'
-  | 'Accessibility'
-  | 'Quality Assurance'
-  | 'Content'
-  | 'Performance'
-  | 'Automation'
-  | 'Documentation'
-  | 'Feature Request'
-  | 'Process Improvement'
-  | 'Other';
+  | 'Scanning'
+  | 'POD'
+  | 'EPDF'
+  | 'Accessibility';
 
 export type ProductionImpact = 'Low' | 'Medium' | 'High' | 'Critical';
 
@@ -70,16 +62,21 @@ export interface InternalFeedbackItem {
   title: string;
   description: string;
   category: FeedbackCategory;
-  relatedModule: string; // e.g. "Accessibility Checker", "Chapter Manager", "TOC Manager", "EPUB Compiler"
+  relatedModule?: string; // Optional e.g. "Accessibility Checker"
   relatedBook?: string; // Optional e.g. "EPUB Accessibility Handbook"
 
-  // Section 3: Impact
-  problemCurrentExperience: string;
-  suggestedImprovement: string;
-  expectedBenefit: string;
-  whoIsAffected: string;
-  frequency: string; // e.g. "Every EPUB release", "Daily during QA", "Occasional"
-  productionImpact: ProductionImpact;
+  // Section 2: Details
+  rootCause: string;
+  preventiveAction: string;
+  correctiveAction: string;
+
+  // Legacy fields (deprecated)
+  problemCurrentExperience?: string;
+  suggestedImprovement?: string;
+  expectedBenefit?: string;
+  whoIsAffected?: string;
+  frequency?: string; // e.g. "Every EPUB release", "Daily during QA", "Occasional"
+  productionImpact?: ProductionImpact;
   priority: Priority;
 
   // Section 4: Suggested Solution

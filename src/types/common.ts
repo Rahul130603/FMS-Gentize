@@ -31,6 +31,8 @@ export interface Attachment {
   fileData?: string; // Data URL or text content for real downloads
   source?: 'upload' | 'sample'; // Explicitly distinguish user upload vs sample demo file
   file?: Blob | File; // In-memory reference to real uploaded File/Blob
+  storageKey?: string; // Unique storage reference key
+  fileId?: string; // Unique file ID
   uploadedAt: string;
 }
 

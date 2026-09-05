@@ -1,37 +1,36 @@
-import React, { useState, useEffect } from 'react';
-import { useFeedback } from '../../context/FeedbackContext';
+import React, { useState, useEffect, useRef } from 'react';
+import { useFeedback, normalizeCategory } from '../../context/FeedbackContext';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import {
   InternalFeedbackItem,
   FeedbackType,
-  FeedbackCategory,
-  ProductionImpact
+  FeedbackCategory
 } from '../../types/feedback';
-import { Priority, Attachment } from '../../types/common';
-import { INITIAL_BOOKS } from '../../data/initialBooks';
+import { Attachment, Priority } from '../../types/common';
 import {
   Sparkles,
   ArrowUpRight,
   Info,
-  AlertCircle,
   AlertOctagon,
   FileText,
-  TrendingUp,
-  Sliders,
+  UserCheck,
   Paperclip,
   UploadCloud,
   X,
   CheckCircle2,
   Bookmark,
-  Download
+  Download,
+  ImageIcon
 } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import {
   downloadAttachment,
-  createSamplePngDataUrl,
-  createSamplePdfDataUrl
+  formatFileSize,
+  inferMimeType,
+  readFileAsDataUrl
 } from '../../utils/exportUtils';
+import { storeUploadedFile, removeUploadedFile } from '../../utils/fileStorage';
 
 interface SubmitFeedbackModalProps {
   isOpen: boolean;
@@ -59,12 +58,6 @@ const TYPE_OPTIONS: { type: FeedbackType; label: string; desc: string; icon: any
     icon: Sparkles
   },
   {
-    type: 'Usability Feedback',
-    label: 'Usability Feedback',
-    desc: 'UI clarity, ergonomics, or layout issue',
-    icon: AlertCircle
-  },
-  {
     type: 'Process Issue',
     label: 'Process Issue',
     desc: 'Bottleneck or governance friction',
@@ -73,30 +66,37 @@ const TYPE_OPTIONS: { type: FeedbackType; label: string; desc: string; icon: any
 ];
 
 const CATEGORY_OPTIONS: FeedbackCategory[] = [
-  'Tool / UI',
-  'Workflow',
-  'EPUB Production',
-  'Accessibility',
-  'Quality Assurance',
-  'Content',
-  'Performance',
-  'Automation',
-  'Documentation',
-  'Feature Request',
-  'Process Improvement',
-  'Other'
+  'Scanning',
+  'POD',
+  'EPDF',
+  'Accessibility'
 ];
 
-const MODULE_OPTIONS = [
-  'Accessibility Checker',
-  'Chapter Manager',
-  'TOC Manager',
-  'EPUB Compiler',
-  'Spine Builder',
-  'Metadata Editor',
-  'Typesetting Tool',
-  'Asset Validator'
+const MEMBER_OPTIONS = [
+  'Priya S.',
+  'Arun K.',
+  'Rahul M.',
+  'Meena T.',
+  'Saran S.'
 ];
+
+const TEAM_OPTIONS = [
+  'Accessibility Team',
+  'Production Team',
+  'QA Team',
+  'Editorial Team',
+  'Publishing Team'
+];
+
+const MEMBER_TEAM_MAP: Record<string, string> = {
+  'Priya S.': 'Accessibility Team',
+  'Arun K.': 'Production Team',
+  'Rahul M.': 'QA Team',
+  'Meena T.': 'Editorial Team',
+  'Saran S.': 'Publishing Team'
+};
+
+const PRIORITY_OPTIONS: Priority[] = ['High', 'Medium', 'Low'];
 
 export const SubmitFeedbackModal: React.FC<SubmitFeedbackModalProps> = ({
   isOpen,
@@ -108,50 +108,51 @@ export const SubmitFeedbackModal: React.FC<SubmitFeedbackModalProps> = ({
 
   const isEditing = !!initialData;
 
-  // Form States
+  const mockupInputRef = useRef<HTMLInputElement>(null);
+  const docInputRef = useRef<HTMLInputElement>(null);
+
+  // Section 1: Feedback Type
   const [type, setType] = useState<FeedbackType>('Improvement');
+
+  // Section 2: Feedback Details
   const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [category, setCategory] = useState<FeedbackCategory>('EPUB Production');
-  const [relatedModule, setRelatedModule] = useState('Accessibility Checker');
-  const [relatedBook, setRelatedBook] = useState('EPUB Accessibility Handbook');
+  const [category, setCategory] = useState<FeedbackCategory>('Scanning');
+  const [rootCause, setRootCause] = useState('');
+  const [preventiveAction, setPreventiveAction] = useState('');
+  const [correctiveAction, setCorrectiveAction] = useState('');
 
-  const [problemCurrentExperience, setProblemCurrentExperience] = useState('');
-  const [suggestedImprovement, setSuggestedImprovement] = useState('');
-  const [whoIsAffected, setWhoIsAffected] = useState('Accessibility Reviewers & QA Leads');
-  const [frequency, setFrequency] = useState('Every EPUB release (multiple times daily)');
-  const [productionImpact, setProductionImpact] = useState<ProductionImpact>('High');
-  const [expectedBenefit, setExpectedBenefit] = useState('');
-  const [priority, setPriority] = useState<Priority>('High');
-
-  const [suggestedSolution, setSuggestedSolution] = useState('');
-  const [attachments, setAttachments] = useState<Attachment[]>([]);
-
+  // Section 3: Ownership & Priority
   const [submittedBy, setSubmittedBy] = useState('Priya S.');
   const [team, setTeam] = useState('Accessibility Team');
+  const [priority, setPriority] = useState<Priority>('Medium');
+  const [owner, setOwner] = useState('Arun K.');
+
+  // Section 4: Attachments
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmittedByChange = (name: string) => {
+    setSubmittedBy(name);
+    if (MEMBER_TEAM_MAP[name]) {
+      setTeam(MEMBER_TEAM_MAP[name]);
+    }
+  };
 
   useEffect(() => {
     if (initialData) {
       setType(initialData.type);
       setTitle(initialData.title);
-      setDescription(initialData.description);
-      setCategory(initialData.category);
-      setRelatedModule(initialData.relatedModule);
-      setRelatedBook(initialData.relatedBook || '');
-      setProblemCurrentExperience(initialData.problemCurrentExperience || '');
-      setSuggestedImprovement(initialData.suggestedImprovement || '');
-      setWhoIsAffected(initialData.whoIsAffected || '');
-      setFrequency(initialData.frequency || '');
-      setProductionImpact(initialData.productionImpact || 'Medium');
-      setExpectedBenefit(initialData.expectedBenefit || '');
-      setPriority(initialData.priority);
-      setSuggestedSolution(initialData.suggestedSolution || '');
+      setCategory(normalizeCategory(initialData.category));
+      setRootCause(initialData.rootCause || initialData.problemCurrentExperience || initialData.description || '');
+      setPreventiveAction(initialData.preventiveAction || initialData.suggestedImprovement || '');
+      setCorrectiveAction(initialData.correctiveAction || initialData.suggestedSolution || initialData.suggestedImprovement || '');
+      setSubmittedBy(initialData.submittedBy || 'Priya S.');
+      setTeam(initialData.team || MEMBER_TEAM_MAP[initialData.submittedBy] || 'Accessibility Team');
+      setPriority(initialData.priority || 'Medium');
+      setOwner(initialData.owner || 'Arun K.');
       setAttachments(initialData.attachments || []);
-      setSubmittedBy(initialData.submittedBy);
-      setTeam(initialData.team || '');
     } else {
       resetForm();
     }
@@ -160,47 +161,131 @@ export const SubmitFeedbackModal: React.FC<SubmitFeedbackModalProps> = ({
   const resetForm = () => {
     setType('Improvement');
     setTitle('');
-    setDescription('');
-    setProblemCurrentExperience('');
-    setSuggestedImprovement('');
-    setExpectedBenefit('');
-    setSuggestedSolution('');
+    setCategory('Scanning');
+    setRootCause('');
+    setPreventiveAction('');
+    setCorrectiveAction('');
+    setSubmittedBy('Priya S.');
+    setTeam('Accessibility Team');
+    setPriority('Medium');
+    setOwner('Arun K.');
     setAttachments([]);
     setErrors({});
   };
 
-  const handleAddSampleAttachment = (attachmentType: 'mockup' | 'pdf') => {
-    const id = `f-att-${Date.now()}`;
-    if (attachmentType === 'mockup') {
-      const fileName = `workflow_mockup_${Date.now().toString().slice(-4)}.png`;
-      setAttachments((prev) => [
-        ...prev,
-        {
-          id,
-          name: fileName,
-          type: 'image/png',
-          size: '1.1 MB',
-          fileData: createSamplePngDataUrl(fileName, 'Feedback Proposal UI Architecture Mockup'),
-          uploadedAt: '2026-09-05 09:35'
+  const generateUniqueAttachmentId = (prefix: 'mock' | 'doc') => {
+    const ts = Date.now();
+    const rand = Math.random().toString(36).substring(2, 8);
+    const entropy = typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID().slice(0, 8)
+      : Math.floor(Math.random() * 1000000).toString(36);
+    return `f-att-${prefix}-${ts}-${rand}-${entropy}`;
+  };
+
+  const handleMockupUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const files = Array.from(e.target.files);
+      const newAttachments: Attachment[] = [];
+
+      for (const file of files) {
+        try {
+          const attId = generateUniqueAttachmentId('mock');
+          const fileId = attId;
+          const storageKey = `feedback/attachments/${attId}/${encodeURIComponent(file.name)}`;
+
+          // Store real binary File in client-side storage (memory + IndexedDB) under id, storageKey, and fileId
+          await storeUploadedFile(attId, file, file.name, storageKey, fileId);
+
+          // For small files (< 500KB), generate dataUrl for instant inline preview
+          let fileData: string | undefined = undefined;
+          if (file.size < 500000) {
+            try {
+              fileData = await readFileAsDataUrl(file);
+            } catch {
+              // ignore
+            }
+          }
+
+          newAttachments.push({
+            id: attId,
+            fileId,
+            storageKey,
+            name: file.name,
+            type: file.type || inferMimeType(file.name),
+            size: formatFileSize(file.size),
+            source: 'upload',
+            file: file,
+            fileData,
+            uploadedAt: new Date().toISOString().slice(0, 16).replace('T', ' ')
+          });
+        } catch (err) {
+          console.error('Failed to read uploaded mockup file:', err);
         }
-      ]);
-    } else {
-      const fileName = 'publishing_enhancement_spec.pdf';
-      setAttachments((prev) => [
-        ...prev,
-        {
-          id,
-          name: fileName,
-          type: 'application/pdf',
-          size: '420 KB',
-          fileData: createSamplePdfDataUrl(fileName, 'PubVantage Enhancement Proposal Specification Document'),
-          uploadedAt: '2026-09-05 09:35'
-        }
-      ]);
+      }
+
+      setAttachments((prev) => [...prev, ...newAttachments]);
+      addToast(`Attached ${files.length} UI mockup file(s)`, undefined, 'info');
+      if (mockupInputRef.current) {
+        mockupInputRef.current.value = '';
+      }
     }
   };
 
-  const handleRemoveAttachment = (id: string) => {
+  const handleDocUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const files = Array.from(e.target.files);
+      const newAttachments: Attachment[] = [];
+
+      for (const file of files) {
+        try {
+          const attId = generateUniqueAttachmentId('doc');
+          const fileId = attId;
+          const storageKey = `feedback/attachments/${attId}/${encodeURIComponent(file.name)}`;
+
+          // Store real binary File in client-side storage (memory + IndexedDB) under id, storageKey, and fileId
+          await storeUploadedFile(attId, file, file.name, storageKey, fileId);
+
+          // For small files (< 500KB), generate dataUrl for instant inline preview
+          let fileData: string | undefined = undefined;
+          if (file.size < 500000) {
+            try {
+              fileData = await readFileAsDataUrl(file);
+            } catch {
+              // ignore
+            }
+          }
+
+          newAttachments.push({
+            id: attId,
+            fileId,
+            storageKey,
+            name: file.name,
+            type: file.type || inferMimeType(file.name),
+            size: formatFileSize(file.size),
+            source: 'upload',
+            file: file,
+            fileData,
+            uploadedAt: new Date().toISOString().slice(0, 16).replace('T', ' ')
+          });
+        } catch (err) {
+          console.error('Failed to read uploaded specification document:', err);
+        }
+      }
+
+      setAttachments((prev) => [...prev, ...newAttachments]);
+      addToast(`Attached ${files.length} specification document(s)`, undefined, 'info');
+      if (docInputRef.current) {
+        docInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleRemoveAttachment = async (target: string | Attachment) => {
+    const id = typeof target === 'string' ? target : target.id;
+    const att = typeof target === 'object' ? target : attachments.find((a) => a.id === id);
+    if (id) await removeUploadedFile(id);
+    if (att?.storageKey) await removeUploadedFile(att.storageKey);
+    if (att?.fileId) await removeUploadedFile(att.fileId);
     setAttachments((prev) => prev.filter((a) => a.id !== id));
   };
 
@@ -208,13 +293,27 @@ export const SubmitFeedbackModal: React.FC<SubmitFeedbackModalProps> = ({
     const newErrors: Record<string, string> = {};
 
     if (!title.trim()) newErrors.title = 'Feedback title is required';
-    if (!problemCurrentExperience.trim() && !description.trim()) {
-      newErrors.problemCurrentExperience = 'Current experience or description is required';
+    if (!rootCause.trim()) {
+      newErrors.rootCause = 'Root Cause is required.';
     }
-    if (!suggestedImprovement.trim()) {
-      newErrors.suggestedImprovement = 'Suggested improvement is required';
+    if (!preventiveAction.trim()) {
+      newErrors.preventiveAction = 'Preventive Action is required.';
     }
-    if (!submittedBy.trim()) newErrors.submittedBy = 'Submitter name is required';
+    if (!correctiveAction.trim()) {
+      newErrors.correctiveAction = 'Corrective Action is required.';
+    }
+    if (!submittedBy.trim()) {
+      newErrors.submittedBy = 'Please select a submitter';
+    }
+    if (!team.trim()) {
+      newErrors.team = 'Please select a team';
+    }
+    if (!priority) {
+      newErrors.priority = 'Please select a priority';
+    }
+    if (!owner.trim()) {
+      newErrors.owner = 'Please select an owner';
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -232,22 +331,21 @@ export const SubmitFeedbackModal: React.FC<SubmitFeedbackModalProps> = ({
 
     const feedbackPayload: Partial<InternalFeedbackItem> = {
       type,
-      title,
-      description: description.trim() || problemCurrentExperience,
+      title: title.trim(),
+      description: rootCause.trim() || title.trim(),
       category,
-      relatedModule,
-      relatedBook: relatedBook || undefined,
-      problemCurrentExperience,
-      suggestedImprovement,
-      whoIsAffected,
-      frequency,
-      productionImpact,
-      expectedBenefit,
+      rootCause: rootCause.trim(),
+      preventiveAction: preventiveAction.trim(),
+      correctiveAction: correctiveAction.trim(),
+      problemCurrentExperience: rootCause.trim(),
+      suggestedImprovement: preventiveAction.trim(),
+      submittedBy: submittedBy.trim(),
+      team: team.trim(),
       priority,
-      suggestedSolution,
-      attachments,
-      submittedBy,
-      team: team || undefined
+      owner: owner.trim(),
+      assignedTo: owner.trim(),
+      suggestedSolution: correctiveAction.trim(),
+      attachments
     };
 
     if (isEditing && initialData) {
@@ -274,7 +372,7 @@ export const SubmitFeedbackModal: React.FC<SubmitFeedbackModalProps> = ({
       subtitle="Share proposals, feature requests, and process improvements for the EPUB publishing ecosystem."
     >
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* SECTION 1: FEEDBACK TYPE SELECTOR */}
+        {/* SECTION 1: FEEDBACK TYPE */}
         <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
           <div className="flex items-center gap-2 pb-2 border-b border-slate-200">
             <Sparkles size={16} className="text-indigo-600" />
@@ -283,7 +381,7 @@ export const SubmitFeedbackModal: React.FC<SubmitFeedbackModalProps> = ({
             </h3>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {TYPE_OPTIONS.map((item) => {
               const isSelected = type === item.type;
               const IconComponent = item.icon;
@@ -341,200 +439,206 @@ export const SubmitFeedbackModal: React.FC<SubmitFeedbackModalProps> = ({
               {errors.title && <p className="text-[11px] text-rose-500 mt-1">{errors.title}</p>}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Category</label>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value as FeedbackCategory)}
-                  className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                >
-                  {CATEGORY_OPTIONS.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">Category</label>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value as FeedbackCategory)}
+                className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+              >
+                {CATEGORY_OPTIONS.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
 
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">
+                Root Cause <span className="text-rose-500">*</span>
+              </label>
+              <textarea
+                rows={3}
+                value={rootCause}
+                onChange={(e) => setRootCause(e.target.value)}
+                placeholder="Describe the underlying cause of the issue..."
+                className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+              />
+              {errors.rootCause && (
+                <p className="text-[11px] text-rose-500 mt-1">{errors.rootCause}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">
+                Preventive Action <span className="text-rose-500">*</span>
+              </label>
+              <textarea
+                rows={3}
+                value={preventiveAction}
+                onChange={(e) => setPreventiveAction(e.target.value)}
+                placeholder="Describe how this issue can be prevented from happening again..."
+                className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+              />
+              {errors.preventiveAction && (
+                <p className="text-[11px] text-rose-500 mt-1">{errors.preventiveAction}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">
+                Corrective Action <span className="text-rose-500">*</span>
+              </label>
+              <textarea
+                rows={3}
+                value={correctiveAction}
+                onChange={(e) => setCorrectiveAction(e.target.value)}
+                placeholder="Describe the action required to fix the current issue..."
+                className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+              />
+              {errors.correctiveAction && (
+                <p className="text-[11px] text-rose-500 mt-1">{errors.correctiveAction}</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* SECTION 3: OWNERSHIP & PRIORITY */}
+        <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+          <div className="flex items-center gap-2 pb-2 border-b border-slate-200">
+            <UserCheck size={16} className="text-indigo-600" />
+            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+              Section 3 — Ownership & Priority
+            </h3>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div className="space-y-3">
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Related Module</label>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Submitted By <span className="text-rose-500">*</span>
+                </label>
                 <select
-                  value={relatedModule}
-                  onChange={(e) => setRelatedModule(e.target.value)}
+                  value={submittedBy}
+                  onChange={(e) => handleSubmittedByChange(e.target.value)}
                   className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                 >
-                  {MODULE_OPTIONS.map((m) => (
+                  <option value="">Select Submitter</option>
+                  {MEMBER_OPTIONS.map((m) => (
                     <option key={m} value={m}>
                       {m}
                     </option>
                   ))}
                 </select>
+                {errors.submittedBy && (
+                  <p className="text-[11px] text-rose-500 mt-1">{errors.submittedBy}</p>
+                )}
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Related Book / Project</label>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Team <span className="text-rose-500">*</span>
+                </label>
                 <select
-                  value={relatedBook}
-                  onChange={(e) => setRelatedBook(e.target.value)}
+                  value={team}
+                  onChange={(e) => setTeam(e.target.value)}
                   className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                 >
-                  <option value="">General Publishing Suite</option>
-                  {INITIAL_BOOKS.map((b) => (
-                    <option key={b.id} value={b.title}>
-                      {b.title}
+                  <option value="">Select Team</option>
+                  {TEAM_OPTIONS.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
                     </option>
                   ))}
                 </select>
+                {errors.team && (
+                  <p className="text-[11px] text-rose-500 mt-1">{errors.team}</p>
+                )}
               </div>
             </div>
 
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">
-                Problem / Current Experience <span className="text-rose-500">*</span>
-              </label>
-              <textarea
-                rows={2}
-                value={problemCurrentExperience}
-                onChange={(e) => setProblemCurrentExperience(e.target.value)}
-                placeholder="What is currently frustrating, slow, or error-prone about the current workflow?"
-                className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-              />
-              {errors.problemCurrentExperience && (
-                <p className="text-[11px] text-rose-500 mt-1">{errors.problemCurrentExperience}</p>
-              )}
-            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Priority <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  value={priority}
+                  onChange={(e) => setPriority(e.target.value as Priority)}
+                  className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs font-semibold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                >
+                  {PRIORITY_OPTIONS.map((p) => (
+                    <option key={p} value={p}>
+                      {p}
+                    </option>
+                  ))}
+                </select>
+                {errors.priority && (
+                  <p className="text-[11px] text-rose-500 mt-1">{errors.priority}</p>
+                )}
+              </div>
 
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">
-                Suggested Improvement <span className="text-rose-500">*</span>
-              </label>
-              <textarea
-                rows={2}
-                value={suggestedImprovement}
-                onChange={(e) => setSuggestedImprovement(e.target.value)}
-                placeholder="What specific change or enhancement do you recommend?"
-                className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-              />
-              {errors.suggestedImprovement && (
-                <p className="text-[11px] text-rose-500 mt-1">{errors.suggestedImprovement}</p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* SECTION 3: IMPACT */}
-        <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
-          <div className="flex items-center gap-2 pb-2 border-b border-slate-200">
-            <TrendingUp size={16} className="text-indigo-600" />
-            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-              Section 3 — Impact Assessment
-            </h3>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Who is Affected?</label>
-              <input
-                type="text"
-                value={whoIsAffected}
-                onChange={(e) => setWhoIsAffected(e.target.value)}
-                placeholder="e.g. Accessibility reviewers, Typesetters"
-                className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Frequency of Occurrence</label>
-              <input
-                type="text"
-                value={frequency}
-                onChange={(e) => setFrequency(e.target.value)}
-                placeholder="e.g. Daily during QA, Every EPUB build"
-                className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Production Impact</label>
-              <select
-                value={productionImpact}
-                onChange={(e) => setProductionImpact(e.target.value as ProductionImpact)}
-                className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs font-semibold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-              >
-                <option value="Critical">Critical Impact</option>
-                <option value="High">High Impact</option>
-                <option value="Medium">Medium Impact</option>
-                <option value="Low">Low Impact</option>
-              </select>
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="block font-semibold text-slate-700 mb-1">Expected Benefit</label>
-              <input
-                type="text"
-                value={expectedBenefit}
-                onChange={(e) => setExpectedBenefit(e.target.value)}
-                placeholder="e.g. Saves 2 hours per book title, avoids distribution rejections"
-                className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Priority</label>
-              <select
-                value={priority}
-                onChange={(e) => setPriority(e.target.value as Priority)}
-                className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs font-semibold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-              >
-                <option value="Critical">Critical</option>
-                <option value="High">High</option>
-                <option value="Medium">Medium</option>
-                <option value="Low">Low</option>
-              </select>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Owner <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  value={owner}
+                  onChange={(e) => setOwner(e.target.value)}
+                  className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                >
+                  <option value="">Select Owner</option>
+                  {MEMBER_OPTIONS.map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+                {errors.owner && (
+                  <p className="text-[11px] text-rose-500 mt-1">{errors.owner}</p>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
-        {/* SECTION 4: SUGGESTED SOLUTION */}
-        <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
-          <div className="flex items-center gap-2 pb-2 border-b border-slate-200">
-            <Sliders size={16} className="text-indigo-600" />
-            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-              Section 4 — Suggested Solution
-            </h3>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Describe your suggested solution or improvement...
-            </label>
-            <textarea
-              rows={3}
-              value={suggestedSolution}
-              onChange={(e) => setSuggestedSolution(e.target.value)}
-              placeholder="Outline the UI design, technical approach, API, or operational checklist you envision..."
-              className="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none leading-relaxed"
-            />
-          </div>
-        </div>
-
-        {/* SECTION 5: ATTACHMENTS */}
+        {/* SECTION 4: ATTACHMENTS & REFERENCE DOCUMENTS */}
         <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
           <div className="flex items-center gap-2 pb-2 border-b border-slate-200">
             <Paperclip size={16} className="text-indigo-600" />
             <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-              Section 5 — Attachments & Reference Documents
+              Section 4 — Attachments & Reference Documents
             </h3>
           </div>
 
           <div className="space-y-3 text-xs">
+            {/* Hidden Real Browser File Inputs */}
+            <input
+              type="file"
+              ref={mockupInputRef}
+              onChange={handleMockupUpload}
+              accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml"
+              multiple
+              className="hidden"
+              aria-hidden="true"
+            />
+            <input
+              type="file"
+              ref={docInputRef}
+              onChange={handleDocUpload}
+              accept="application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
+              multiple
+              className="hidden"
+              aria-hidden="true"
+            />
+
             <div className="flex flex-wrap gap-2">
               <Button
                 type="button"
                 variant="secondary"
                 size="sm"
-                onClick={() => handleAddSampleAttachment('mockup')}
+                onClick={() => mockupInputRef.current?.click()}
                 icon={<UploadCloud size={13} />}
               >
                 + Add UI Mockup
@@ -543,7 +647,7 @@ export const SubmitFeedbackModal: React.FC<SubmitFeedbackModalProps> = ({
                 type="button"
                 variant="secondary"
                 size="sm"
-                onClick={() => handleAddSampleAttachment('pdf')}
+                onClick={() => docInputRef.current?.click()}
                 icon={<FileText size={13} />}
               >
                 + Add Specification Doc
@@ -552,88 +656,61 @@ export const SubmitFeedbackModal: React.FC<SubmitFeedbackModalProps> = ({
 
             {attachments.length > 0 && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
-                {attachments.map((file) => (
-                  <div
-                    key={file.id}
-                    className="p-2.5 bg-white rounded-lg border border-slate-200 flex items-center justify-between"
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <FileText size={14} className="text-purple-600 shrink-0" />
-                      <div className="min-w-0 truncate">
-                        <span className="font-semibold text-slate-800 block truncate">{file.name}</span>
-                        <span className="text-[10px] text-slate-400">
-                          {file.type} • {file.size}
-                        </span>
+                {attachments.map((file) => {
+                  const isImg = file.type?.startsWith('image/') || /\.(png|jpe?g|webp|svg)$/i.test(file.name);
+                  return (
+                    <div
+                      key={file.id}
+                      className="p-2.5 bg-white rounded-lg border border-slate-200 flex items-center justify-between shadow-2xs"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        {isImg ? (
+                          <ImageIcon size={14} className="text-indigo-600 shrink-0" />
+                        ) : (
+                          <FileText size={14} className="text-purple-600 shrink-0" />
+                        )}
+                        <div className="min-w-0 truncate">
+                          <span className="font-semibold text-slate-800 block truncate" title={file.name}>
+                            {file.name}
+                          </span>
+                          <span className="text-[10px] text-slate-400">
+                            {file.type || 'File'} • {file.size}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            await downloadAttachment(file, (title, desc, type) => {
+                              addToast(title, desc || '', type || 'info');
+                            });
+                          }}
+                          className="p-1 text-slate-400 hover:text-indigo-600 rounded transition-colors"
+                          title={`Download ${file.name}`}
+                          aria-label={`Download ${file.name}`}
+                        >
+                          <Download size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemoveAttachment(file.id);
+                          }}
+                          className="p-1 text-slate-400 hover:text-rose-600 rounded transition-colors"
+                          title={`Remove ${file.name}`}
+                          aria-label={`Remove ${file.name}`}
+                        >
+                          <X size={14} />
+                        </button>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          downloadAttachment(file, (title, desc, type) => {
-                            addToast(title, desc || '', type || 'info');
-                          });
-                        }}
-                        className="p-1 text-slate-400 hover:text-indigo-600 rounded transition-colors"
-                        title="Download attachment"
-                        aria-label={`Download ${file.name}`}
-                      >
-                        <Download size={14} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRemoveAttachment(file.id);
-                        }}
-                        className="p-1 text-slate-400 hover:text-rose-600 rounded transition-colors"
-                        title="Remove file"
-                        aria-label={`Remove ${file.name}`}
-                      >
-                        <X size={14} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
-          </div>
-        </div>
-
-        {/* SECTION 6: SUBMISSION */}
-        <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
-          <div className="flex items-center gap-2 pb-2 border-b border-slate-200">
-            <CheckCircle2 size={16} className="text-indigo-600" />
-            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-              Section 6 — Submitter Information
-            </h3>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">
-                Submitted By <span className="text-rose-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={submittedBy}
-                onChange={(e) => setSubmittedBy(e.target.value)}
-                className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-              />
-              {errors.submittedBy && <p className="text-[11px] text-rose-500 mt-1">{errors.submittedBy}</p>}
-            </div>
-
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Department / Team</label>
-              <input
-                type="text"
-                value={team}
-                onChange={(e) => setTeam(e.target.value)}
-                placeholder="e.g. Accessibility Team"
-                className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-              />
-            </div>
           </div>
         </div>
 

@@ -47,6 +47,7 @@ export const ReportIssueModal: React.FC<ReportIssueModalProps> = ({
   // File input refs for real native uploads
   const screenshotInputRef = useRef<HTMLInputElement>(null);
   const logFileInputRef = useRef<HTMLInputElement>(null);
+  const docFileInputRef = useRef<HTMLInputElement>(null);
 
   // Left Column States (Issue Diagnostics & Location)
   const [projectType, setProjectType] = useState<string>('Scan');
@@ -109,6 +110,15 @@ export const ReportIssueModal: React.FC<ReportIssueModalProps> = ({
     setErrors({});
   };
 
+  const generateUniqueAttachmentId = (prefix: 'img' | 'log' | 'doc') => {
+    const ts = Date.now();
+    const rand = Math.random().toString(36).substring(2, 8);
+    const entropy = typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID().slice(0, 8)
+      : Math.floor(Math.random() * 1000000).toString(36);
+    return `att-${prefix}-${ts}-${rand}-${entropy}`;
+  };
+
   // Real Screenshot Upload Handler
   const handleScreenshotChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -117,12 +127,26 @@ export const ReportIssueModal: React.FC<ReportIssueModalProps> = ({
 
       for (const file of files) {
         try {
-          const attId = `att-img-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
-          // Store actual binary File in client-side storage (memory + IndexedDB)
-          await storeUploadedFile(attId, file);
-          const fileData = await readFileAsDataUrl(file);
+          const attId = generateUniqueAttachmentId('img');
+          const fileId = attId;
+          const storageKey = `errors/attachments/${attId}/${encodeURIComponent(file.name)}`;
+
+          // Store actual binary File in client-side storage (memory + IndexedDB) under id, storageKey, and fileId
+          await storeUploadedFile(attId, file, file.name, storageKey, fileId);
+
+          let fileData: string | undefined = undefined;
+          if (file.size < 500000) {
+            try {
+              fileData = await readFileAsDataUrl(file);
+            } catch {
+              // ignore
+            }
+          }
+
           newAttachments.push({
             id: attId,
+            fileId,
+            storageKey,
             name: file.name,
             type: file.type || inferMimeType(file.name),
             size: formatFileSize(file.size),
@@ -138,7 +162,6 @@ export const ReportIssueModal: React.FC<ReportIssueModalProps> = ({
 
       setAttachments((prev) => [...prev, ...newAttachments]);
       addToast(`Attached ${files.length} screenshot(s)`, undefined, 'info');
-      // Reset input value to allow re-uploading the same file if desired
       if (screenshotInputRef.current) {
         screenshotInputRef.current.value = '';
       }
@@ -153,12 +176,26 @@ export const ReportIssueModal: React.FC<ReportIssueModalProps> = ({
 
       for (const file of files) {
         try {
-          const attId = `att-log-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
-          // Store actual binary File in client-side storage (memory + IndexedDB)
-          await storeUploadedFile(attId, file);
-          const fileData = await readFileAsDataUrl(file);
+          const attId = generateUniqueAttachmentId('log');
+          const fileId = attId;
+          const storageKey = `errors/attachments/${attId}/${encodeURIComponent(file.name)}`;
+
+          // Store actual binary File in client-side storage (memory + IndexedDB) under id, storageKey, and fileId
+          await storeUploadedFile(attId, file, file.name, storageKey, fileId);
+
+          let fileData: string | undefined = undefined;
+          if (file.size < 500000) {
+            try {
+              fileData = await readFileAsDataUrl(file);
+            } catch {
+              // ignore
+            }
+          }
+
           newAttachments.push({
             id: attId,
+            fileId,
+            storageKey,
             name: file.name,
             type: file.type || inferMimeType(file.name),
             size: formatFileSize(file.size),
@@ -180,8 +217,61 @@ export const ReportIssueModal: React.FC<ReportIssueModalProps> = ({
     }
   };
 
-  const handleRemoveAttachment = async (id: string) => {
-    await removeUploadedFile(id);
+  // Real Document / PDF Upload Handler
+  const handleDocFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const files = Array.from(e.target.files);
+      const newAttachments: Attachment[] = [];
+
+      for (const file of files) {
+        try {
+          const attId = generateUniqueAttachmentId('doc');
+          const fileId = attId;
+          const storageKey = `errors/attachments/${attId}/${encodeURIComponent(file.name)}`;
+
+          // Store actual binary File in client-side storage (memory + IndexedDB) under id, storageKey, and fileId
+          await storeUploadedFile(attId, file, file.name, storageKey, fileId);
+
+          let fileData: string | undefined = undefined;
+          if (file.size < 500000) {
+            try {
+              fileData = await readFileAsDataUrl(file);
+            } catch {
+              // ignore
+            }
+          }
+
+          newAttachments.push({
+            id: attId,
+            fileId,
+            storageKey,
+            name: file.name,
+            type: file.type || inferMimeType(file.name),
+            size: formatFileSize(file.size),
+            source: 'upload',
+            file: file,
+            fileData,
+            uploadedAt: new Date().toISOString().slice(0, 16).replace('T', ' ')
+          });
+        } catch (err) {
+          console.error('Failed to read uploaded document/PDF:', err);
+        }
+      }
+
+      setAttachments((prev) => [...prev, ...newAttachments]);
+      addToast(`Attached ${files.length} document/PDF file(s)`, undefined, 'info');
+      if (docFileInputRef.current) {
+        docFileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleRemoveAttachment = async (target: string | Attachment) => {
+    const id = typeof target === 'string' ? target : target.id;
+    const att = typeof target === 'object' ? target : attachments.find((a) => a.id === id);
+    if (id) await removeUploadedFile(id);
+    if (att?.storageKey) await removeUploadedFile(att.storageKey);
+    if (att?.fileId) await removeUploadedFile(att.fileId);
     setAttachments((prev) => prev.filter((a) => a.id !== id));
   };
 
@@ -265,9 +355,19 @@ export const ReportIssueModal: React.FC<ReportIssueModalProps> = ({
         <input
           ref={logFileInputRef}
           type="file"
-          accept=".log,.txt,.json,.xml,text/plain,application/json,application/xml"
+          accept=".log,.txt,.json,.xml,.pdf,text/plain,application/json,application/xml,application/pdf"
           multiple
           onChange={handleLogFileChange}
+          className="hidden"
+          tabIndex={-1}
+          aria-hidden="true"
+        />
+        <input
+          ref={docFileInputRef}
+          type="file"
+          accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          multiple
+          onChange={handleDocFileChange}
           className="hidden"
           tabIndex={-1}
           aria-hidden="true"
@@ -478,7 +578,7 @@ export const ReportIssueModal: React.FC<ReportIssueModalProps> = ({
               {/* Attach Evidence Section */}
               <div className="pt-2 border-t border-slate-200">
                 <label className="block font-semibold text-slate-700 mb-1.5">Attach Evidence</label>
-                <div className="flex items-center gap-2 mb-2">
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
                   <Button
                     type="button"
                     variant="secondary"
@@ -496,6 +596,15 @@ export const ReportIssueModal: React.FC<ReportIssueModalProps> = ({
                     icon={<FileText size={13} className="text-slate-600" />}
                   >
                     + Log File
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => docFileInputRef.current?.click()}
+                    icon={<FileText size={13} className="text-purple-600" />}
+                  >
+                    + Document / PDF
                   </Button>
                 </div>
 

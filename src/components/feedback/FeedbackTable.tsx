@@ -15,7 +15,6 @@ import {
   ArrowDown,
   Sparkles,
   CheckCircle2,
-  Box,
   Layers
 } from 'lucide-react';
 import { ConfirmModal } from '../common/ConfirmModal';
@@ -78,7 +77,7 @@ export const FeedbackTable: React.FC<FeedbackTableProps> = ({
 
                 <th
                   scope="col"
-                  className="px-4 py-3 cursor-pointer group hover:bg-slate-100/80 transition-colors min-w-[240px]"
+                  className="px-4 py-3 cursor-pointer group hover:bg-slate-100/80 transition-colors min-w-[280px]"
                   onClick={() => setSort('title')}
                 >
                   <div className="flex items-center gap-1.5">
@@ -100,10 +99,6 @@ export const FeedbackTable: React.FC<FeedbackTableProps> = ({
 
                 <th scope="col" className="px-3 py-3">
                   Category
-                </th>
-
-                <th scope="col" className="px-3 py-3">
-                  Related Module
                 </th>
 
                 <th scope="col" className="px-3 py-3">
@@ -168,12 +163,12 @@ export const FeedbackTable: React.FC<FeedbackTableProps> = ({
                   </td>
 
                   {/* Title */}
-                  <td className="px-4 py-3.5 min-w-[240px]">
+                  <td className="px-4 py-3.5 min-w-[280px]">
                     <div className="font-semibold text-slate-900 line-clamp-1 group-hover:text-indigo-600 transition-colors">
                       {item.title}
                     </div>
                     <div className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">
-                      {item.problemCurrentExperience || item.description}
+                      {item.rootCause || item.problemCurrentExperience || item.description}
                     </div>
                     {item.comments && item.comments.length > 0 && (
                       <div className="flex items-center gap-1 mt-1 text-[10px] text-slate-400">
@@ -191,14 +186,6 @@ export const FeedbackTable: React.FC<FeedbackTableProps> = ({
                   {/* Category */}
                   <td className="px-3 py-3.5 whitespace-nowrap">
                     <span className="text-xs text-slate-700 font-medium">{item.category}</span>
-                  </td>
-
-                  {/* Related Module */}
-                  <td className="px-3 py-3.5 whitespace-nowrap">
-                    <span className="inline-flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-700">
-                      <Box size={10} className="text-slate-500" />
-                      {item.relatedModule}
-                    </span>
                   </td>
 
                   {/* Submitted By */}

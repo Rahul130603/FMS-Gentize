@@ -23,7 +23,6 @@ import {
   FileText,
   Edit3,
   Trash2,
-  Box,
   User,
   Calendar,
   AlertCircle,
@@ -31,7 +30,8 @@ import {
   RotateCcw,
   CheckCheck,
   XCircle,
-  Download
+  Download,
+  ImageIcon
 } from 'lucide-react';
 import { ConfirmModal } from '../common/ConfirmModal';
 import { InternalFeedbackItem, FeedbackStatus } from '../../types/feedback';
@@ -80,8 +80,12 @@ export const FeedbackDetailDrawer: React.FC<FeedbackDetailDrawerProps> = ({
         subtitle={
           <div className="flex items-center gap-3 mt-1 text-xs">
             <span className="text-slate-600 font-medium">{selectedFeedback.category}</span>
-            <span className="text-slate-300">•</span>
-            <span className="text-slate-500 font-mono">Module: {selectedFeedback.relatedModule}</span>
+            {selectedFeedback.relatedBook && (
+              <>
+                <span className="text-slate-300">•</span>
+                <span className="text-slate-500">{selectedFeedback.relatedBook}</span>
+              </>
+            )}
           </div>
         }
         headerActions={
@@ -282,76 +286,84 @@ export const FeedbackDetailDrawer: React.FC<FeedbackDetailDrawerProps> = ({
           {/* TAB 1: DETAILS */}
           {activeTab === 'details' && (
             <div className="space-y-6">
-              {/* Problem vs Suggested Improvement */}
+              {/* Root Cause, Preventive Action, Corrective Action */}
               <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-4">
                 <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
                   <FileText size={14} className="text-indigo-600" />
-                  <span>Problem Statement & Improvement Proposal</span>
+                  <span>Root Cause & Corrective Analysis</span>
                 </h4>
 
                 <div>
-                  <span className="text-[11px] font-semibold text-rose-700 uppercase">
-                    Problem / Current Experience
+                  <span className="text-[11px] font-semibold text-rose-700 uppercase tracking-wider">
+                    Root Cause
                   </span>
-                  <p className="text-xs text-slate-800 mt-1 leading-relaxed bg-rose-50/50 p-3 rounded-lg border border-rose-200/60">
-                    {selectedFeedback.problemCurrentExperience || selectedFeedback.description}
+                  <p className="text-xs text-slate-800 mt-1 leading-relaxed bg-rose-50/50 p-3 rounded-lg border border-rose-200/60 whitespace-pre-wrap">
+                    {selectedFeedback.rootCause || selectedFeedback.problemCurrentExperience || selectedFeedback.description}
                   </p>
                 </div>
 
                 <div>
-                  <span className="text-[11px] font-semibold text-emerald-700 uppercase">
-                    Suggested Improvement
+                  <span className="text-[11px] font-semibold text-amber-700 uppercase tracking-wider">
+                    Preventive Action
                   </span>
-                  <p className="text-xs text-slate-800 mt-1 leading-relaxed bg-emerald-50/50 p-3 rounded-lg border border-emerald-200/60">
-                    {selectedFeedback.suggestedImprovement || selectedFeedback.description}
+                  <p className="text-xs text-slate-800 mt-1 leading-relaxed bg-amber-50/50 p-3 rounded-lg border border-amber-200/60 whitespace-pre-wrap">
+                    {selectedFeedback.preventiveAction || selectedFeedback.suggestedImprovement || 'No preventive action specified.'}
                   </p>
                 </div>
 
-                {selectedFeedback.suggestedSolution && (
-                  <div>
-                    <span className="text-[11px] font-semibold text-slate-700 uppercase">
-                      Proposed Solution / Architecture
-                    </span>
-                    <p className="text-xs text-slate-800 mt-1 leading-relaxed bg-slate-50 p-3 rounded-lg border border-slate-200/70">
-                      {selectedFeedback.suggestedSolution}
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* Impact & Scope */}
-              <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
-                <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                  <TrendingUp size={14} className="text-indigo-600" />
-                  <span>Impact Assessment & Beneficiaries</span>
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-200/60">
-                    <span className="text-slate-400 block text-[11px]">Expected Benefit</span>
-                    <span className="font-medium text-slate-800 mt-0.5 block leading-relaxed">
-                      {selectedFeedback.expectedBenefit || 'Improved operational publishing velocity'}
-                    </span>
-                  </div>
-                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-200/60">
-                    <span className="text-slate-400 block text-[11px]">Who is Affected?</span>
-                    <span className="font-medium text-slate-800 mt-0.5 block leading-relaxed">
-                      {selectedFeedback.whoIsAffected || 'Publishing & QA teams'}
-                    </span>
-                  </div>
-                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-200/60">
-                    <span className="text-slate-400 block text-[11px]">Frequency of Occurrence</span>
-                    <span className="font-medium text-slate-800 mt-0.5 block">
-                      {selectedFeedback.frequency || 'Regular workflow'}
-                    </span>
-                  </div>
-                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-200/60">
-                    <span className="text-slate-400 block text-[11px]">Related Book / Project</span>
-                    <span className="font-medium text-slate-800 mt-0.5 block">
-                      {selectedFeedback.relatedBook || 'General EPUB Studio Platform'}
-                    </span>
-                  </div>
+                <div>
+                  <span className="text-[11px] font-semibold text-emerald-700 uppercase tracking-wider">
+                    Corrective Action
+                  </span>
+                  <p className="text-xs text-slate-800 mt-1 leading-relaxed bg-emerald-50/50 p-3 rounded-lg border border-emerald-200/60 whitespace-pre-wrap">
+                    {selectedFeedback.correctiveAction || selectedFeedback.suggestedSolution || selectedFeedback.suggestedImprovement || 'No corrective action specified.'}
+                  </p>
                 </div>
               </div>
+
+              {/* Impact & Scope - only displayed if present */}
+              {(selectedFeedback.expectedBenefit || selectedFeedback.whoIsAffected || selectedFeedback.frequency || selectedFeedback.relatedBook) && (
+                <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
+                  <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                    <TrendingUp size={14} className="text-indigo-600" />
+                    <span>Impact Assessment & Beneficiaries</span>
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    {selectedFeedback.expectedBenefit && (
+                      <div className="p-3 bg-slate-50 rounded-lg border border-slate-200/60">
+                        <span className="text-slate-400 block text-[11px]">Expected Benefit</span>
+                        <span className="font-medium text-slate-800 mt-0.5 block leading-relaxed">
+                          {selectedFeedback.expectedBenefit}
+                        </span>
+                      </div>
+                    )}
+                    {selectedFeedback.whoIsAffected && (
+                      <div className="p-3 bg-slate-50 rounded-lg border border-slate-200/60">
+                        <span className="text-slate-400 block text-[11px]">Who is Affected?</span>
+                        <span className="font-medium text-slate-800 mt-0.5 block leading-relaxed">
+                          {selectedFeedback.whoIsAffected}
+                        </span>
+                      </div>
+                    )}
+                    {selectedFeedback.frequency && (
+                      <div className="p-3 bg-slate-50 rounded-lg border border-slate-200/60">
+                        <span className="text-slate-400 block text-[11px]">Frequency of Occurrence</span>
+                        <span className="font-medium text-slate-800 mt-0.5 block">
+                          {selectedFeedback.frequency}
+                        </span>
+                      </div>
+                    )}
+                    {selectedFeedback.relatedBook && (
+                      <div className="p-3 bg-slate-50 rounded-lg border border-slate-200/60">
+                        <span className="text-slate-400 block text-[11px]">Related Book / Project</span>
+                        <span className="font-medium text-slate-800 mt-0.5 block">
+                          {selectedFeedback.relatedBook}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Management & Governance */}
               <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
@@ -421,41 +433,44 @@ export const FeedbackDetailDrawer: React.FC<FeedbackDetailDrawerProps> = ({
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {selectedFeedback.attachments.map((file) => (
-                    <div
-                      key={file.id}
-                      className="p-3 bg-white rounded-xl border border-slate-200 flex items-center justify-between hover:border-indigo-300 transition-colors shadow-2xs"
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="p-2 bg-purple-50 text-purple-600 rounded-lg shrink-0">
-                          <FileText size={16} />
-                        </div>
-                        <div className="min-w-0">
-                          <div className="text-xs font-semibold text-slate-800 truncate" title={file.name}>
-                            {file.name}
-                          </div>
-                          <div className="text-[10px] text-slate-400">
-                            {file.size} • {file.uploadedAt}
-                          </div>
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          downloadAttachment(file, (title, desc, type) => {
-                            addToast(title, desc || '', type || 'info');
-                          });
-                        }}
-                        className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-md transition-colors"
-                        title="Download attachment"
-                        aria-label={`Download ${file.name}`}
+                  {selectedFeedback.attachments.map((file) => {
+                    const isImg = file.type?.startsWith('image/') || /\.(png|jpe?g|webp|svg)$/i.test(file.name);
+                    return (
+                      <div
+                        key={file.id}
+                        className="p-3 bg-white rounded-xl border border-slate-200 flex items-center justify-between hover:border-indigo-300 transition-colors shadow-2xs"
                       >
-                        <Download size={14} />
-                      </button>
-                    </div>
-                  ))}
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className={`p-2 ${isImg ? 'bg-indigo-50 text-indigo-600' : 'bg-purple-50 text-purple-600'} rounded-lg shrink-0`}>
+                            {isImg ? <ImageIcon size={16} /> : <FileText size={16} />}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="text-xs font-semibold text-slate-800 truncate" title={file.name}>
+                              {file.name}
+                            </div>
+                            <div className="text-[10px] text-slate-400">
+                              {file.type || 'File'} • {file.size} • {file.uploadedAt}
+                            </div>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            await downloadAttachment(file, (title, desc, type) => {
+                              addToast(title, desc || '', type || 'info');
+                            });
+                          }}
+                          className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-md transition-colors"
+                          title={`Download ${file.name}`}
+                          aria-label={`Download ${file.name}`}
+                        >
+                          <Download size={14} />
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

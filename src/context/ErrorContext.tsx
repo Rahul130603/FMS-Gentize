@@ -72,7 +72,27 @@ export const ErrorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [errors, setErrors] = useState<ErrorReport[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved) as ErrorReport[];
+        return parsed.map((err) => ({
+          ...err,
+          attachments: (err.attachments || []).map((att) => {
+            const isInitialSample = INITIAL_ERRORS.some((e) => e.attachments?.some((ea) => ea.id === att.id));
+            const safeSource = isInitialSample ? 'sample' : (att.source || 'upload');
+            // Clean any legacy synthetic fileData so it never interferes with real files
+            const safeFileData = att.fileData && (att.fileData.includes('PubVantage') || att.fileData.includes('Automated%20PDF') || att.fileData.includes('JVBERi0xLjQKMSAwIG9iajw8L1R5cGU'))
+              ? undefined
+              : att.fileData;
+            return {
+              ...att,
+              source: safeSource,
+              fileData: safeFileData,
+              storageKey: att.storageKey,
+              fileId: att.fileId || att.id
+            };
+          })
+        }));
+      }
 
       // Upgrade from v5: preserve user-created issues while refreshing sample attachments with valid URLs
       const prevSaved = localStorage.getItem('pubvantage_error_reports_v5');
@@ -87,7 +107,15 @@ export const ErrorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               attachments: sample.attachments
             };
           }
-          return err;
+          return {
+            ...err,
+            attachments: (err.attachments || []).map((att) => ({
+              ...att,
+              source: att.source || 'upload',
+              storageKey: att.storageKey,
+              fileId: att.fileId || att.id
+            }))
+          };
         });
         return merged;
       }
@@ -109,10 +137,18 @@ export const ErrorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const sanitizedErrors = errors.map((err) => ({
         ...err,
         attachments: err.attachments.map((att) => {
-          if (att.source === 'upload') {
+          const isInitialSample = INITIAL_ERRORS.some((e) => e.attachments?.some((ea) => ea.id === att.id));
+          const isUpload = att.source === 'upload' || (!isInitialSample && att.source !== 'sample');
+          if (isUpload) {
             const { file, ...rest } = att;
-            const safeFileData = att.fileData && att.fileData.length < 100000 ? att.fileData : undefined;
-            return { ...rest, fileData: safeFileData, source: 'upload' };
+            const safeFileData = att.fileData && !att.fileData.includes('PubVantage') && att.fileData.length < 100000 ? att.fileData : undefined;
+            return {
+              ...rest,
+              fileData: safeFileData,
+              source: 'upload' as const,
+              storageKey: att.storageKey,
+              fileId: att.fileId || att.id
+            };
           }
           return att;
         })

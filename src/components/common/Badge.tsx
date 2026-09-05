@@ -274,7 +274,8 @@ export const PriorityBadge: React.FC<{ priority: Priority; size?: 'sm' | 'md' }>
 };
 
 // --- Impact Badge ---
-export const ImpactBadge: React.FC<{ impact: ProductionImpact }> = ({ impact }) => {
+export const ImpactBadge: React.FC<{ impact?: ProductionImpact }> = ({ impact }) => {
+  if (!impact) return null;
   switch (impact) {
     case 'Critical':
       return <span className="text-xs font-semibold px-2 py-0.5 rounded bg-rose-100 text-rose-800">Critical Impact</span>;

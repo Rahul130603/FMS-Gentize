@@ -161,41 +161,75 @@ export async function downloadAttachment(
     return false;
   }
 
+  const isUserUpload =
+    attachment.source === 'upload' ||
+    Boolean(attachment.storageKey) ||
+    Boolean(attachment.fileId) ||
+    attachment.file instanceof Blob ||
+    Boolean(
+      attachment.id &&
+      (attachment.id.startsWith('att-doc-') ||
+        attachment.id.startsWith('att-img-') ||
+        attachment.id.startsWith('att-log-') ||
+        attachment.id.startsWith('f-att-doc-') ||
+        attachment.id.startsWith('f-att-mock-') ||
+        attachment.id.startsWith('f-att-'))
+    );
   let blob: Blob | null = null;
 
   // 1. In-memory File or Blob reference (available during current browser session)
-  if (attachment.file instanceof Blob) {
+  if (attachment.file instanceof Blob && attachment.file.size > 0) {
     blob = attachment.file;
   }
 
   // 2. Persistent client-side IndexedDB binary storage (survives page refreshes)
-  if (!blob && attachment.id) {
-    try {
-      const stored = await getUploadedFile(attachment.id);
-      if (stored instanceof Blob) {
-        blob = stored;
+  // Queries id, storageKey, and fileId in priority order
+  if (!blob) {
+    const candidateKeys = [
+      attachment.id,
+      attachment.storageKey,
+      attachment.fileId
+    ].filter((k): k is string => Boolean(k && k.trim()));
+
+    for (const key of candidateKeys) {
+      try {
+        const stored = await getUploadedFile(key);
+        if (stored instanceof Blob && stored.size > 0) {
+          blob = stored;
+          break;
+        }
+      } catch (err) {
+        console.warn(`Could not read binary file for key ${key}:`, err);
       }
-    } catch (err) {
-      console.warn('Could not read binary file from storage:', err);
     }
   }
 
-  // 3. Encoded data payload (Data URL or base64 data)
+  // 3. Encoded data payload (Data URL or base64 data, if present)
+  // Strictly ignore any legacy synthetic/mock PDF data URLs
   if (!blob && attachment.fileData) {
-    try {
-      const mime = attachment.type || inferMimeType(attachment.name);
-      if (attachment.fileData.startsWith('data:')) {
-        blob = dataUrlToBlob(attachment.fileData, mime);
-      } else {
-        blob = new Blob([attachment.fileData], { type: mime });
+    const isSynthetic =
+      attachment.fileData.includes('PubVantage') ||
+      attachment.fileData.includes('Automated%20PDF') ||
+      attachment.fileData.includes('Diagnostic%20Evidence') ||
+      attachment.fileData.includes('JVBERi0xLjQKMSAwIG9iajw8L1R5cGU');
+
+    if (!isSynthetic) {
+      try {
+        const mime = attachment.type || inferMimeType(attachment.name);
+        if (attachment.fileData.startsWith('data:')) {
+          blob = dataUrlToBlob(attachment.fileData, mime);
+        } else {
+          blob = new Blob([attachment.fileData], { type: mime });
+        }
+      } catch (err) {
+        console.warn('Could not decode fileData to Blob:', err);
       }
-    } catch (err) {
-      console.warn('Could not decode fileData to Blob:', err);
     }
   }
 
-  // 4. Sample or remote static file asset URL (e.g. /sample-evidence/...)
-  if (!blob && attachment.url && attachment.url !== '#' && !attachment.url.startsWith('javascript:')) {
+  // 4. Sample or remote static file asset URL (ONLY for pre-existing sample attachments)
+  // CRITICAL: User-uploaded files must NEVER fall back to sample or demo assets!
+  if (!blob && !isUserUpload && attachment.source === 'sample' && attachment.url && attachment.url !== '#' && !attachment.url.startsWith('javascript:')) {
     try {
       const metaEnv = (import.meta as unknown as { env?: { BASE_URL?: string } }).env;
       const resolvedUrl = attachment.url.startsWith('/') && metaEnv?.BASE_URL && metaEnv.BASE_URL !== '/'
@@ -213,20 +247,30 @@ export async function downloadAttachment(
     }
   }
 
-  // 5. If no real binary data exists, fail cleanly with appropriate message
-  if (!blob) {
-    const errorMsg = attachment.source === 'sample'
-      ? 'The sample evidence file is unavailable.'
-      : 'The original file is unavailable.';
+  // 5. If no real binary data exists, fail cleanly with explicit error toast
+  // User uploads will NEVER return a sample or synthetic file.
+  if (!blob || blob.size === 0) {
+    const errorMsg = isUserUpload
+      ? 'The original file is unavailable.'
+      : 'The sample evidence file is unavailable.';
     if (onToast) onToast('Download failed', errorMsg, 'error');
     return false;
   }
 
   // 6. Trigger native browser download using the exact File/Blob
   try {
-    const downloadUrl = URL.createObjectURL(blob);
+    const targetMime = attachment.type || inferMimeType(attachment.name || '');
+    let finalBlob = blob;
+    if (!finalBlob.type || finalBlob.type === 'application/octet-stream') {
+      if (targetMime && targetMime !== 'application/octet-stream') {
+        finalBlob = new Blob([finalBlob], { type: targetMime });
+      }
+    }
+
+    const downloadUrl = URL.createObjectURL(finalBlob);
     const link = document.createElement('a');
     link.href = downloadUrl;
+    link.download = attachment.name || 'download';
     link.setAttribute('download', attachment.name || 'download');
     link.style.display = 'none';
     document.body.appendChild(link);

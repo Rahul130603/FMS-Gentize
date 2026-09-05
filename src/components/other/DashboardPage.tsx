@@ -189,7 +189,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                     <span className="font-semibold text-slate-800 truncate">{item.title}</span>
                   </div>
                   <div className="text-[11px] text-slate-500 mt-0.5 truncate">
-                    By {item.submittedBy} • Module: {item.relatedModule}
+                    By {item.submittedBy} • {item.category}
                   </div>
                 </div>
                 <div className="shrink-0">

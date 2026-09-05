@@ -34,18 +34,10 @@ const TYPE_OPTIONS: FeedbackType[] = [
 ];
 
 const CATEGORY_OPTIONS: FeedbackCategory[] = [
-  'Tool / UI',
-  'Workflow',
-  'EPUB Production',
-  'Accessibility',
-  'Quality Assurance',
-  'Content',
-  'Performance',
-  'Automation',
-  'Documentation',
-  'Feature Request',
-  'Process Improvement',
-  'Other'
+  'Scanning',
+  'POD',
+  'EPDF',
+  'Accessibility'
 ];
 
 const MODULE_OPTIONS = [

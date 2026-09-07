@@ -19,17 +19,29 @@ export default function ProjectDetailModal({ projectId, onClose, onUpdated }: { 
   const canEditOwn = user?.role === 'Employee';
 
   const load = () => {
-    api.get(`/projects/${projectId}`).then((res) => {
-      setProject(res.data.project);
-      setTimeline(res.data.timeline);
-      setForm(res.data.project);
+    api.get(`/projects/${projectId}`).then((res: any) => {
+      setProject(res.data?.project || null);
+      setTimeline(res.data?.timeline || []);
+      setForm(res.data?.project || {});
     });
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [projectId]);
+  useEffect(() => { load(); }, [projectId]);
 
   if (!project) return null;
-  const h = project.health;
+
+  const h = project.health || {
+    score: (project as any).health_score ?? 85,
+    category: (project as any).health_category ?? 'Healthy',
+    risk: (project as any).health_risk ?? 'Low Risk',
+    daysRemaining: {
+      label: (project as any).due_label || (project.due_date ? `Due ${project.due_date}` : 'On track'),
+      color: (project as any).due_color || '#16a34a'
+    }
+  };
+  const recs = Array.isArray(project.recommendations) && project.recommendations.length > 0
+    ? project.recommendations
+    : ['Ensure quality assurance validation is conducted on current milestone.'];
 
   const save = async () => {
     setSaving(true);
@@ -62,8 +74,8 @@ export default function ProjectDetailModal({ projectId, onClose, onUpdated }: { 
             <h2 style={{ margin: 0, fontSize: '1.2rem' }}>{project.book_title}</h2>
             <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>#{project.project_number} · {project.client_name || 'No client'}</div>
             <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
-              <PriorityBadge value={project.priority} />
-              <StatusBadge value={project.status} />
+              <PriorityBadge value={project.priority || 'Normal'} />
+              <StatusBadge value={project.status || 'In Progress'} />
             </div>
           </div>
           <button onClick={onClose} className="btn btn-sm">Close</button>
@@ -73,16 +85,16 @@ export default function ProjectDetailModal({ projectId, onClose, onUpdated }: { 
           <HealthGauge score={h.score} category={h.category} />
           <div>
             <div style={{ fontWeight: 700, fontSize: '1.05rem' }}>{h.category} · {h.risk}</div>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{h.daysRemaining.label}</div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{h.daysRemaining?.label}</div>
           </div>
           <div style={{ marginLeft: 'auto' }}>
             <ul className="rec-list" style={{ maxWidth: 320 }}>
-              {project.recommendations.map((r, i) => <li key={i}>{r}</li>)}
+              {recs.map((r, i) => <li key={i}>{r}</li>)}
             </ul>
           </div>
         </div>
 
-        <WorkflowTracker currentStage={project.workflow_stage} />
+        <WorkflowTracker currentStage={project.workflow_stage || 'Scanning'} />
 
         <div className="tabs" style={{ marginTop: 20 }}>
           <button className={tab === 'overview' ? 'active' : ''} onClick={() => setTab('overview')}>Overview</button>
@@ -93,7 +105,7 @@ export default function ProjectDetailModal({ projectId, onClose, onUpdated }: { 
         {tab === 'overview' && (
           <div className="form-grid">
             <div className="form-field"><label>Department</label><div>{project.department || '—'}</div></div>
-            <div className="form-field"><label>Type</label><div>{project.project_type}</div></div>
+            <div className="form-field"><label>Type</label><div>{project.project_type || '—'}</div></div>
             <div className="form-field"><label>Employee</label><div>{project.assignedEmployee?.name || '—'}</div></div>
             <div className="form-field"><label>Manager</label><div>{project.managerUser?.name || '—'}</div></div>
             <div className="form-field"><label>Start Date</label><div>{project.start_date || '—'}</div></div>
@@ -101,23 +113,23 @@ export default function ProjectDetailModal({ projectId, onClose, onUpdated }: { 
             <div className="form-field">
               <label>Workflow Stage</label>
               {canEdit ? (
-                <select value={form.workflow_stage} onChange={(e) => setForm({ ...form, workflow_stage: e.target.value })}>
+                <select value={form.workflow_stage || 'Scanning'} onChange={(e) => setForm({ ...form, workflow_stage: e.target.value })}>
                   {WORKFLOW_STAGES.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
-              ) : <div>{project.workflow_stage}</div>}
+              ) : <div>{project.workflow_stage || 'Scanning'}</div>}
             </div>
             <div className="form-field">
               <label>Status</label>
               {canEdit ? (
-                <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+                <select value={form.status || 'In Progress'} onChange={(e) => setForm({ ...form, status: e.target.value })}>
                   {PROJECT_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
-              ) : <div>{project.status}</div>}
+              ) : <div>{project.status || 'In Progress'}</div>}
             </div>
             {canEditFull && (
               <div className="form-field">
                 <label>Priority</label>
-                <select value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })}>
+                <select value={form.priority || 'Normal'} onChange={(e) => setForm({ ...form, priority: e.target.value })}>
                   {PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}
                 </select>
               </div>
@@ -131,8 +143,8 @@ export default function ProjectDetailModal({ projectId, onClose, onUpdated }: { 
             <div className="form-field">
               <label>Completion %</label>
               {canEdit ? (
-                <input type="number" min={0} max={100} value={form.completion_percentage} onChange={(e) => setForm({ ...form, completion_percentage: parseInt(e.target.value) || 0 })} />
-              ) : <div>{project.completion_percentage}%</div>}
+                <input type="number" min={0} max={100} value={form.completion_percentage ?? 0} onChange={(e) => setForm({ ...form, completion_percentage: parseInt(e.target.value) || 0 })} />
+              ) : <div>{project.completion_percentage ?? 0}%</div>}
             </div>
             {canEditFull && (
               <div className="form-field">

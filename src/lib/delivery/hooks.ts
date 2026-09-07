@@ -7,9 +7,11 @@ export function useUsers() {
   const { user } = useAuth();
   const [users, setUsers] = useState<UserOption[]>([]);
   useEffect(() => {
-    if (user?.role === 'Admin' || user?.role === 'Manager') {
-      api.get('/users').then((r) => setUsers(r.data)).catch(() => {});
-    }
+    api.get('/users').then((r: any) => {
+      if (Array.isArray(r?.data)) {
+        setUsers(r.data);
+      }
+    }).catch(() => {});
   }, [user]);
   return users;
 }

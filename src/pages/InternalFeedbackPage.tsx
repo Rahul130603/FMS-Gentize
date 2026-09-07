@@ -13,9 +13,9 @@ import { InternalFeedbackItem } from '../types/feedback';
 import { MessageSquarePlus, Plus } from 'lucide-react';
 
 interface InternalFeedbackPageProps {
-  isSubmitModalOpen: boolean;
-  onOpenSubmitModal: () => void;
-  onCloseSubmitModal: () => void;
+  isSubmitModalOpen?: boolean;
+  onOpenSubmitModal?: () => void;
+  onCloseSubmitModal?: () => void;
 }
 
 export const InternalFeedbackPage: React.FC<InternalFeedbackPageProps> = ({
@@ -23,6 +23,10 @@ export const InternalFeedbackPage: React.FC<InternalFeedbackPageProps> = ({
   onOpenSubmitModal,
   onCloseSubmitModal
 }) => {
+  const [internalSubmitOpen, setInternalSubmitOpen] = useState(false);
+  const activeSubmitOpen = isSubmitModalOpen !== undefined ? isSubmitModalOpen : internalSubmitOpen;
+  const handleOpenSubmit = onOpenSubmitModal || (() => setInternalSubmitOpen(true));
+  const handleCloseSubmit = onCloseSubmitModal || (() => setInternalSubmitOpen(false));
   const {
     filteredFeedback,
     page,
@@ -70,7 +74,7 @@ export const InternalFeedbackPage: React.FC<InternalFeedbackPageProps> = ({
           <Button
             variant="primary"
             size="md"
-            onClick={onOpenSubmitModal}
+            onClick={handleOpenSubmit}
             icon={<Plus size={16} />}
             className="shadow-sm font-semibold"
           >
@@ -91,7 +95,7 @@ export const InternalFeedbackPage: React.FC<InternalFeedbackPageProps> = ({
           title="No internal feedback found"
           description="Submit an idea or improvement suggestion to help improve the publishing workflow."
           actionText="+ Submit Feedback"
-          onAction={onOpenSubmitModal}
+          onAction={handleOpenSubmit}
           secondaryActionText="Clear Filters"
           onSecondaryAction={clearFilters}
           type="folder"
@@ -124,9 +128,9 @@ export const InternalFeedbackPage: React.FC<InternalFeedbackPageProps> = ({
 
       {/* 6. SUBMIT / EDIT FEEDBACK MODAL */}
       <SubmitFeedbackModal
-        isOpen={isSubmitModalOpen || !!editingFeedback}
+        isOpen={activeSubmitOpen || !!editingFeedback}
         onClose={() => {
-          if (isSubmitModalOpen) onCloseSubmitModal();
+          if (activeSubmitOpen) handleCloseSubmit();
           if (editingFeedback) setEditingFeedback(null);
         }}
         initialData={editingFeedback}

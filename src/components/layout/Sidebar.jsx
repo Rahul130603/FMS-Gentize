@@ -16,7 +16,14 @@ import {
   Sparkles,
   HelpCircle,
   Menu,
-  X
+  X,
+  RotateCcw,
+  CalendarCheck2,
+  MessageSquareText,
+  Clock8,
+  AlertOctagon,
+  MessageSquarePlus,
+  LifeBuoy
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { usePublishing } from '../../context/PublishingContext';
@@ -162,6 +169,90 @@ export function Sidebar({ mobileOpen, setMobileOpen }) {
                   )}
                 </NavLink>
 
+                {/* Daily Allotment Status */}
+                <NavLink
+                  to="/reports/daily-allotment"
+                  onClick={() => setMobileOpen(false)}
+                  className={subNavLinkClass}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <CalendarCheck2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span>Daily Allotment Status</span>
+                  </div>
+                </NavLink>
+
+                {/* Rework Round Analysis */}
+                <NavLink
+                  to="/reports/rework"
+                  onClick={() => setMobileOpen(false)}
+                  className={subNavLinkClass}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <RotateCcw className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                    <span>Rework Analysis</span>
+                  </div>
+                </NavLink>
+
+                {/* Due Date Delivery Report */}
+                <NavLink
+                  to="/reports/due-date-delivery"
+                  onClick={() => setMobileOpen(false)}
+                  className={subNavLinkClass}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Clock8 className="w-3.5 h-3.5 text-sky-600 shrink-0" />
+                    <span>Due Date Delivery</span>
+                  </div>
+                </NavLink>
+
+                {/* Customer Feedback Report */}
+                <NavLink
+                  to="/reports/customer-feedback"
+                  onClick={() => setMobileOpen(false)}
+                  className={subNavLinkClass}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <MessageSquareText className="w-3.5 h-3.5 text-violet-600 shrink-0" />
+                    <span>Customer Feedback</span>
+                  </div>
+                </NavLink>
+
+                {/* Error Reports */}
+                <NavLink
+                  to="/reports/error-reports"
+                  onClick={() => setMobileOpen(false)}
+                  className={subNavLinkClass}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <AlertOctagon className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                    <span>Error Reports</span>
+                  </div>
+                </NavLink>
+
+                {/* Internal Feedback */}
+                <NavLink
+                  to="/reports/internal-feedback"
+                  onClick={() => setMobileOpen(false)}
+                  className={subNavLinkClass}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <MessageSquarePlus className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+                    <span>Internal Feedback</span>
+                  </div>
+                </NavLink>
+
+                {/* Technical Query Reports */}
+                <NavLink
+                  to="/reports/technical-queries"
+                  onClick={() => setMobileOpen(false)}
+                  className={subNavLinkClass}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <LifeBuoy className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                    <span>Technical Query Reports</span>
+                  </div>
+                </NavLink>
+
                 {/* Production Overview */}
                 <NavLink
                   to="/reports/production"
@@ -175,6 +266,24 @@ export function Sidebar({ mobileOpen, setMobileOpen }) {
                 </NavLink>
               </div>
             )}
+          </div>
+
+          {/* Support & Issue Tracking Section */}
+          <div>
+            <span className="px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
+              Support & Issue Tracking
+            </span>
+            <nav className="space-y-1">
+              <NavLink to="/technical-query/dashboard" onClick={() => setMobileOpen(false)} className={navLinkClass}>
+                <LifeBuoy className="w-4 h-4 shrink-0" />
+                <span>Technical Query Desk</span>
+              </NavLink>
+
+              <NavLink to="/technical-query/my-queries" onClick={() => setMobileOpen(false)} className={navLinkClass}>
+                <FileSpreadsheet className="w-4 h-4 shrink-0" />
+                <span>My Queries</span>
+              </NavLink>
+            </nav>
           </div>
 
           {/* Administration Section */}

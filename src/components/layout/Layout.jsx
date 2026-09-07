@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
+import { ToastContainer } from '../common/ToastContainer';
 
 export function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -21,6 +22,7 @@ export function Layout() {
           PubFlow FMS &bull; Digital & Book Publishing Production Management Platform &bull; WCAG 2.1 AA Compliant
         </footer>
       </div>
+      <ToastContainer />
     </div>
   );
 }

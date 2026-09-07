@@ -54,14 +54,49 @@ export const api = {
   getSummary: () => request('/reports/summary'),
 
   // Feedback Data Grid
-  getFeedbackList: (params = {}) => {
+  getFeedbackList: async (params = {}) => {
     const query = new URLSearchParams();
     Object.entries(params).forEach(([key, val]) => {
       if (val !== undefined && val !== null && val !== '') {
         query.append(key, val);
       }
     });
-    return request(`/reports/feedback?${query.toString()}`);
+    try {
+      return await request(`/reports/feedback?${query.toString()}`);
+    } catch (e) {
+      // Offline fallback using INITIAL_CUSTOMER_FEEDBACK
+      const { INITIAL_CUSTOMER_FEEDBACK } = await import('../data/customerFeedbackData');
+      let filtered = [...INITIAL_CUSTOMER_FEEDBACK];
+      if (params.search) {
+        const s = params.search.toLowerCase();
+        filtered = filtered.filter(f => 
+          f.isbn.toLowerCase().includes(s) ||
+          f.title.toLowerCase().includes(s) ||
+          f.customer_name.toLowerCase().includes(s) ||
+          f.feedback_number.toLowerCase().includes(s)
+        );
+      }
+      if (params.feedbackType) {
+        filtered = filtered.filter(f => f.feedback_type === params.feedbackType);
+      }
+      if (params.rating) {
+        filtered = filtered.filter(f => String(f.rating) === String(params.rating));
+      }
+      const page = Number(params.page) || 1;
+      const limit = Number(params.limit) || 10;
+      const start = (page - 1) * limit;
+      const paged = filtered.slice(start, start + limit);
+      return {
+        success: true,
+        data: paged,
+        pagination: {
+          page,
+          limit,
+          total: filtered.length,
+          totalPages: Math.ceil(filtered.length / limit) || 1
+        }
+      };
+    }
   },
 
   // ISBN Deep-Dive & Timeline

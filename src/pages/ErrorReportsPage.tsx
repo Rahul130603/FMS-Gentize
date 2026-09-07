@@ -18,9 +18,9 @@ import {
 } from 'lucide-react';
 
 interface ErrorReportsPageProps {
-  isNewModalOpen: boolean;
-  onOpenNewModal: () => void;
-  onCloseNewModal: () => void;
+  isNewModalOpen?: boolean;
+  onOpenNewModal?: () => void;
+  onCloseNewModal?: () => void;
 }
 
 export const ErrorReportsPage: React.FC<ErrorReportsPageProps> = ({
@@ -29,6 +29,11 @@ export const ErrorReportsPage: React.FC<ErrorReportsPageProps> = ({
   onCloseNewModal
 }) => {
   const { selectedError, setSelectedError } = useErrors();
+
+  const [internalModalOpen, setInternalModalOpen] = useState(false);
+  const activeModalOpen = isNewModalOpen !== undefined ? isNewModalOpen : internalModalOpen;
+  const handleOpenNewModal = onOpenNewModal || (() => setInternalModalOpen(true));
+  const handleCloseNewModal = onCloseNewModal || (() => setInternalModalOpen(false));
 
   const [editingError, setEditingError] = useState<ErrorReport | null>(null);
   const [assigningError, setAssigningError] = useState<ErrorReport | null>(null);
@@ -80,7 +85,7 @@ export const ErrorReportsPage: React.FC<ErrorReportsPageProps> = ({
           <Button
             variant="primary"
             size="sm"
-            onClick={onOpenNewModal}
+            onClick={handleOpenNewModal}
             icon={<Plus size={14} />}
             className="shadow-2xs font-semibold"
           >
@@ -156,9 +161,9 @@ export const ErrorReportsPage: React.FC<ErrorReportsPageProps> = ({
 
       {/* 2-COLUMN REPORT ISSUE MODAL */}
       <ReportIssueModal
-        isOpen={isNewModalOpen || !!editingError}
+        isOpen={activeModalOpen || !!editingError}
         onClose={() => {
-          if (isNewModalOpen) onCloseNewModal();
+          if (activeModalOpen) handleCloseNewModal();
           if (editingError) setEditingError(null);
         }}
         initialData={editingError}

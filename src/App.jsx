@@ -6,6 +6,7 @@ import { IncomingReport } from './pages/IncomingReport';
 import { Dashboard } from './pages/Dashboard';
 import { Projects } from './pages/Projects';
 import { NotFound } from './pages/NotFound';
+import FeedbackDataGrid from './components/FeedbackDataGrid';
 
 export function App() {
   return (
@@ -15,6 +16,9 @@ export function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/reports/my-report" element={<MyReport />} />
         <Route path="/reports/incoming" element={<IncomingReport />} />
+
+        <Route path="/reports/customer-feedback" element={<FeedbackDataGrid />} />
+
         <Route path="/reports/production" element={<Projects />} />
         <Route path="/projects" element={<Projects />} />
         <Route path="/clients" element={<Projects />} />

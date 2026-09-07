@@ -290,7 +290,7 @@ export default function FeedbackDataGrid({ onSelectIsbn, onOpenExportModal }) {
               ) : records.length === 0 ? (
                 <tr>
                   <td colSpan="9" className="px-4 py-12 text-center text-slate-400">
-                    No matching feedback records found for the applied filters.
+                    No feedback records available.
                   </td>
                 </tr>
               ) : (

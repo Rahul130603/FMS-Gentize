@@ -2,7 +2,14 @@ import React from 'react';
 import { UserCheck } from 'lucide-react';
 
 export default function ReviewersTable({ reviewers, employees }) {
-  if (!reviewers || reviewers.length === 0) return null;
+  if (!reviewers || reviewers.length === 0) {
+    return (
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-2xs p-5 text-center text-xs text-slate-400">
+        <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">Rework Raised By</h3>
+        <p>No reviewer records available.</p>
+      </div>
+    );
+  }
 
   const totalRework = reviewers.reduce((acc, r) => acc + r.rework, 0);
   const totalReject = reviewers.reduce((acc, r) => acc + r.reject, 0);

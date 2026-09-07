@@ -611,9 +611,51 @@ export async function fetchReworkDashboard(employee, date, period = 'day', filte
     const res = await fetch('/api/dashboard?' + params.toString());
     if (res.ok) return await res.json();
   } catch (e) {}
-  // Offline fallback using in-memory engine
-  const resolutions = getLocalResolutions();
-  return calculateDashboardMetrics(employee, date, period, filters, resolutions);
+  // When no backend data exists, return empty dashboard state
+  const displayInfo = getPeriodDisplayInfo(date, period);
+  return {
+    period: period,
+    displayInfo: displayInfo,
+    periodLabel: displayInfo.longLabel,
+    employee: employee || '',
+    date: date,
+    filters: filters,
+    kpis: {
+      total_completed: 0,
+      rework: 0,
+      reject: 0,
+      total_defects: 0,
+      corrected_count: 0,
+      pending_count: 0,
+      recovery_rate: "0.00",
+      scan_issues: 0,
+      qc_issues: 0,
+      qag_issues: 0,
+      rework_rate: "0.00%",
+      reject_rate: "0.00%",
+      rework_events: 0,
+      reject_events: 0
+    },
+    distribution: {
+      total: 0,
+      corrected: 0,
+      pending: 0,
+      reject: 0,
+      recovery_rate: "0.00",
+      pending_pct: "0.0"
+    },
+    stage_wise: {
+      scan: { rework: 0, corrected: 0, reject: 0 },
+      qc: { rework: 0, corrected: 0, reject: 0 },
+      qag: { rework: 0, corrected: 0, reject: 0 }
+    },
+    daily_trend: [],
+    files: [],
+    rework_reasons: [],
+    reject_reasons: [],
+    reviewers: [],
+    comparison: []
+  };
 }
 
 export async function resolveReworkFile(employee, fileId, metadata = {}) {

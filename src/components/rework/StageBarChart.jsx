@@ -45,9 +45,15 @@ export default function StageBarChart({ stageWise }) {
         <span className="text-2xs font-medium text-slate-400">Scan vs QC vs QAG</span>
       </div>
 
-      <div>
-        <Chart options={options} series={series} type="bar" height={170} />
-      </div>
+      {rework.every(v => v === 0) && corrected.every(v => v === 0) && reject.every(v => v === 0) ? (
+        <div className="h-[170px] flex items-center justify-center text-xs text-slate-400">
+          No stage defect data available.
+        </div>
+      ) : (
+        <div>
+          <Chart options={options} series={series} type="bar" height={170} />
+        </div>
+      )}
 
       <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-2xs text-slate-500 font-medium">
         <span>Highest defect volume: <strong className="text-slate-800">Scan Origin</strong></span>

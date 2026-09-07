@@ -2,7 +2,16 @@ import React from 'react';
 import { Users2 } from 'lucide-react';
 
 export default function ComparisonTable({ comparison, currentEmployee, displayInfo }) {
-  if (!comparison || comparison.length === 0) return null;
+  if (!comparison || comparison.length === 0) {
+    return (
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-2xs p-5 text-center text-xs text-slate-400">
+        <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">
+          {displayInfo?.comparisonTitle || 'Team Performance Comparison'}
+        </h3>
+        <p>No comparison records available.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white border border-slate-200 rounded-2xl shadow-2xs overflow-hidden flex flex-col justify-between">

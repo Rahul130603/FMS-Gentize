@@ -89,26 +89,16 @@ export const InternalFeedbackPage: React.FC<InternalFeedbackPageProps> = ({
       {/* 3. SEARCH + FILTER TOOLBAR */}
       <FeedbackFilterBar />
 
-      {/* 4. FEEDBACK LIST OR EMPTY STATE */}
-      {filteredFeedback.length === 0 ? (
-        <EmptyState
-          title="No internal feedback found"
-          description="Submit an idea or improvement suggestion to help improve the publishing workflow."
-          actionText="+ Submit Feedback"
-          onAction={handleOpenSubmit}
-          secondaryActionText="Clear Filters"
-          onSecondaryAction={clearFilters}
-          type="folder"
+      {/* 4. FEEDBACK LIST TABLE */}
+      <div className="space-y-0 shadow-xs rounded-xl overflow-hidden">
+        <FeedbackTable
+          onEdit={handleEdit}
+          onChangeStatus={handleChangeStatus}
+          onAddComment={handleChangeStatus}
         />
-      ) : (
-        <div className="space-y-0 shadow-xs rounded-xl overflow-hidden">
-          <FeedbackTable
-            onEdit={handleEdit}
-            onChangeStatus={handleChangeStatus}
-            onAddComment={handleChangeStatus}
-          />
 
-          {/* PAGINATION */}
+        {/* PAGINATION */}
+        {totalCount > 0 && (
           <Pagination
             currentPage={page}
             totalPages={totalPages}
@@ -117,8 +107,8 @@ export const InternalFeedbackPage: React.FC<InternalFeedbackPageProps> = ({
             onPageChange={setPage}
             onPageSizeChange={setPageSize}
           />
-        </div>
-      )}
+        )}
+      </div>
 
       {/* 5. FEEDBACK DETAIL DRAWER */}
       <FeedbackDetailDrawer

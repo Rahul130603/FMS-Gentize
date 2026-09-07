@@ -4,7 +4,16 @@ import Chart from 'react-apexcharts';
 export default function TrendChart({ dailyTrend, displayInfo }) {
   const [activeMetric, setActiveMetric] = useState('rework');
 
-  if (!dailyTrend || dailyTrend.length === 0) return null;
+  if (!dailyTrend || dailyTrend.length === 0) {
+    return (
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs flex flex-col justify-between">
+        <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">Trend Analysis</h3>
+        <div className="h-[170px] flex items-center justify-center text-xs text-slate-400">
+          No trend data available.
+        </div>
+      </div>
+    );
+  }
 
   const categories = dailyTrend.map(d => d.date);
 

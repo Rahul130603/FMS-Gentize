@@ -3,126 +3,7 @@
 const client = axios.create({ baseURL: '/api' });
 
 // Mock technical queries dataset
-export const INITIAL_TECHNICAL_QUERIES = [
-  {
-    id: 1,
-    query_number: 'TQ-2026-001',
-    subject: 'ISBN Metadata mismatch on Springer book export',
-    description: 'The ISBN registered on production batch 404 does not match the ONIX 3.0 metadata catalog record. EPUB validation is throwing a fatal schema warning.',
-    isbn: '9781234567890',
-    category: 'isbn_mismatch',
-    priority: 'urgent',
-    status: 'in_progress',
-    created_by_name: 'Priya S.',
-    assigned_to_name: 'Rahul R.',
-    created_at: '2026-09-04T09:30:00Z',
-    updated_at: '2026-09-05T11:15:00Z',
-    resolved_at: null,
-    attachment_count: 2,
-    attachments: [
-      { id: 1, name: 'onix_error_log.txt', size: 14200 },
-      { id: 2, name: 'epub_preflight_dump.pdf', size: 245000 }
-    ],
-    timeline: [
-      { id: 1, action: 'Query raised', user: 'Priya S.', timestamp: '2026-09-04T09:30:00Z' },
-      { id: 2, action: 'Assigned to Rahul R.', user: 'System', timestamp: '2026-09-04T09:35:00Z' },
-      { id: 3, action: 'Status changed to In Progress', user: 'Rahul R.', timestamp: '2026-09-04T10:00:00Z' }
-    ],
-    comments: [
-      { id: 1, user_name: 'Rahul R.', comment: 'Investigating the ONIX feed transformer rule for prefix 97812.', created_at: '2026-09-04T10:05:00Z' }
-    ]
-  },
-  {
-    id: 2,
-    query_number: 'TQ-2026-002',
-    subject: 'Missing high-res cover plates in delivery zip',
-    description: 'Archive delivered to client missing CMYK 300 DPI spine jacket image.',
-    isbn: '9780132350884',
-    category: 'missing_file',
-    priority: 'high',
-    status: 'open',
-    created_by_name: 'Manoj K.',
-    assigned_to_name: null,
-    created_at: '2026-09-04T14:20:00Z',
-    updated_at: '2026-09-04T14:20:00Z',
-    resolved_at: null,
-    attachment_count: 1,
-    attachments: [{ id: 3, name: 'manifest.json', size: 4200 }],
-    timeline: [
-      { id: 4, action: 'Query raised', user: 'Manoj K.', timestamp: '2026-09-04T14:20:00Z' }
-    ],
-    comments: []
-  },
-  {
-    id: 3,
-    query_number: 'TQ-2026-003',
-    subject: 'MathML symbols clipping in WebKit EPUB renderer',
-    description: 'Integral formulas in chapter 7 exceed baseline bounds on mobile screens.',
-    isbn: '9780262033848',
-    category: 'software_bug',
-    priority: 'high',
-    status: 'resolved',
-    created_by_name: 'Sudhin P.',
-    assigned_to_name: 'Arun K.',
-    created_at: '2026-09-02T08:00:00Z',
-    updated_at: '2026-09-03T16:00:00Z',
-    resolved_at: '2026-09-03T16:00:00Z',
-    attachment_count: 0,
-    attachments: [],
-    timeline: [
-      { id: 5, action: 'Query raised', user: 'Sudhin P.', timestamp: '2026-09-02T08:00:00Z' },
-      { id: 6, action: 'Resolved by patch v2.4.1', user: 'Arun K.', timestamp: '2026-09-03T16:00:00Z' }
-    ],
-    comments: [
-      { id: 2, user_name: 'Arun K.', comment: 'Applied viewBox normalization to all SVG MathML equations.', created_at: '2026-09-03T15:55:00Z' }
-    ]
-  },
-  {
-    id: 4,
-    query_number: 'TQ-2026-004',
-    subject: 'FTP Server connection timeout during mass PDF sync',
-    description: 'Timeout occurs when transferring batches exceeding 500MB to European distributor mirrors.',
-    isbn: null,
-    category: 'server_issue',
-    priority: 'urgent',
-    status: 'closed',
-    created_by_name: 'Claire D.',
-    assigned_to_name: 'DevOps Lead',
-    created_at: '2026-08-28T11:00:00Z',
-    updated_at: '2026-08-29T17:30:00Z',
-    resolved_at: '2026-08-29T17:30:00Z',
-    attachment_count: 1,
-    attachments: [{ id: 4, name: 'ftp_timeout.log', size: 8400 }],
-    timeline: [
-      { id: 7, action: 'Query raised', user: 'Claire D.', timestamp: '2026-08-28T11:00:00Z' },
-      { id: 8, action: 'Closed and verified', user: 'DevOps Lead', timestamp: '2026-08-29T17:30:00Z' }
-    ],
-    comments: []
-  },
-  {
-    id: 5,
-    query_number: 'TQ-2026-005',
-    subject: 'Accessibility contrast report false positive on code blocks',
-    description: 'Axe-core checker flagged dark mode monospace blocks incorrectly.',
-    isbn: '9780596517748',
-    category: 'software_bug',
-    priority: 'normal',
-    status: 'reopened',
-    created_by_name: 'Priya S.',
-    assigned_to_name: 'Arun K.',
-    created_at: '2026-09-01T10:00:00Z',
-    updated_at: '2026-09-04T12:00:00Z',
-    resolved_at: null,
-    attachment_count: 0,
-    attachments: [],
-    timeline: [
-      { id: 9, action: 'Query reopened by Priya S.', user: 'Priya S.', timestamp: '2026-09-04T12:00:00Z' }
-    ],
-    comments: [
-      { id: 3, user_name: 'Priya S.', comment: 'Still reproducing on Safari 17 iOS preview.', created_at: '2026-09-04T12:01:00Z' }
-    ]
-  }
-];
+export const INITIAL_TECHNICAL_QUERIES = [];
 
 let queryStore = [...INITIAL_TECHNICAL_QUERIES];
 
@@ -141,7 +22,7 @@ export const technicalQueryApi = {
           pending_count: queryStore.filter((q) => q.status === 'open' || q.status === 'in_progress').length,
           urgent_count: queryStore.filter((q) => q.priority === 'urgent').length,
           reopened_count: queryStore.filter((q) => q.status === 'reopened').length,
-          avg_resolution_hours: 18.5
+          avg_resolution_hours: 0
         }
       };
     }
@@ -288,7 +169,7 @@ export const reportApi = {
           high_count: queryStore.filter((q) => q.priority === 'high').length,
           pending_count: queryStore.filter((q) => q.status === 'open' || q.status === 'in_progress').length,
           reopened_count: queryStore.filter((q) => q.status === 'reopened').length,
-          avg_resolution_hours: 18.5
+          avg_resolution_hours: 0
         }
       };
     }
@@ -311,23 +192,12 @@ export const reportApi = {
 
   trendReport: async () => {
     return {
-      data: [
-        { date: '01 Sep', raised: 4, resolved: 3 },
-        { date: '02 Sep', raised: 6, resolved: 5 },
-        { date: '03 Sep', raised: 5, resolved: 6 },
-        { date: '04 Sep', raised: 7, resolved: 4 },
-        { date: '05 Sep', raised: 3, resolved: 2 }
-      ]
+      data: []
     };
   }
 };
 
 export const notificationApi = {
-  list: async () => ({
-    data: [
-      { id: 1, query_id: 1, message: 'Your query TQ-2026-001 has been assigned to Rahul R.', is_read: false, created_at: '2026-09-04T09:35:00Z' },
-      { id: 2, query_id: 3, message: 'Your query TQ-2026-003 was marked as Resolved.', is_read: true, created_at: '2026-09-03T16:00:00Z' }
-    ]
-  }),
+  list: async () => ({ data: [] }),
   markRead: async (id) => ({ success: true })
 };

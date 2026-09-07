@@ -104,7 +104,7 @@ export const FeedbackSummaryCards: React.FC = () => {
             <div className="mt-auto">
               <p className="text-[11px] text-slate-500 leading-tight truncate">{card.subtext}</p>
               <div className="flex items-center gap-1 mt-1 text-[10px] text-slate-400">
-                <span>{card.trend}</span>
+                <span>{card.value > 0 ? card.trend : '--'}</span>
               </div>
             </div>
           </button>

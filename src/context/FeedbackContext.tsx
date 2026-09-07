@@ -91,7 +91,9 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved) as InternalFeedbackItem[];
-        return parsed.map((item) => ({
+        const isSampleFeedback = (f: any) => String(f.id).startsWith('FDB-0008') || f.title?.includes('accessibility warnings');
+        const nonSample = parsed.filter(f => !isSampleFeedback(f));
+        return nonSample.map((item) => ({
           ...item,
           category: normalizeCategory(item.category),
           rootCause: item.rootCause || (item as any).problemCurrentExperience || item.description || '',

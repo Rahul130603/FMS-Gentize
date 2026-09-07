@@ -16,17 +16,7 @@ function isHtmlOrInvalid(res: any) {
   return false;
 }
 
-export const MOCK_USERS: UserOption[] = [
-  { id: 1, name: 'Alice Admin', email: 'alice@pubflow.com', role: 'Admin', department: 'Management' },
-  { id: 2, name: 'Maya Manager', email: 'maya@pubflow.com', role: 'Manager', department: 'EPUB' },
-  { id: 3, name: 'Ravi Rao', email: 'ravi@pubflow.com', role: 'Manager', department: 'POD' },
-  { id: 4, name: 'Pradhap Kumar', email: 'pradhap.k@pubflow.com', role: 'Admin', department: 'Digital Publishing' },
-  { id: 5, name: 'Priya Patel', email: 'priya@pubflow.com', role: 'Employee', department: 'Scanning' },
-  { id: 6, name: 'John Employee', email: 'john@pubflow.com', role: 'Employee', department: 'EPUB' },
-  { id: 7, name: 'Sam Lee', email: 'sam@pubflow.com', role: 'Employee', department: 'POD' },
-  { id: 8, name: 'Dana Cruz', email: 'dana@pubflow.com', role: 'Employee', department: 'Cover Design' },
-  { id: 9, name: 'Omar Khan', email: 'omar@pubflow.com', role: 'Employee', department: 'QC' },
-];
+export const MOCK_USERS: UserOption[] = [];
 
 export function normalizeProject(p: any): Project {
   const stage = p.workflow_stage || p.current_stage || 'In Progress';
@@ -131,139 +121,7 @@ export function normalizeProject(p: any): Project {
   };
 }
 
-const RAW_MOCK_PROJECTS = [
-  {
-    id: 101,
-    project_number: 'PRJ-2026-001',
-    isbn: '9781234567890',
-    book_title: 'Advanced File Processing Workflows',
-    client_name: 'Apex Publishing Group',
-    project_type: 'EPUB',
-    department: 'EPUB',
-    assigned_to: 6,
-    assignedEmployee: { id: 6, name: 'John Employee' },
-    manager: 2,
-    managerUser: { id: 2, name: 'Maya Manager' },
-    priority: 'High',
-    status: 'In Progress',
-    workflow_stage: 'EPDF',
-    completion_percentage: 65,
-    due_date: '2026-09-12',
-    actual_delivery: undefined,
-    health_score: 88,
-    health_category: 'Healthy',
-    health_risk: 'Low Risk',
-    days_remaining: 5,
-    due_label: 'Due in 5 days',
-    due_color: '#16a34a',
-    recommendations: ['Milestone EPDF is on track. Expedite QC review.']
-  },
-  {
-    id: 102,
-    project_number: 'PRJ-2026-002',
-    isbn: '9780132350884',
-    book_title: 'Clean Code: A Handbook of Agile Software',
-    client_name: 'Vance Academic Press',
-    project_type: 'POD',
-    department: 'POD',
-    assigned_to: 7,
-    assignedEmployee: { id: 7, name: 'Sam Lee' },
-    manager: 3,
-    managerUser: { id: 3, name: 'Ravi Rao' },
-    priority: 'Critical',
-    status: 'Ready for Delivery',
-    workflow_stage: 'Ready for Delivery',
-    completion_percentage: 95,
-    due_date: '2026-09-08',
-    actual_delivery: undefined,
-    health_score: 94,
-    health_category: 'Excellent',
-    health_risk: 'Low Risk',
-    days_remaining: 1,
-    due_label: 'Due tomorrow',
-    due_color: '#f59e0b',
-    recommendations: ['Perform final pre-flight verification before client handoff.']
-  },
-  {
-    id: 103,
-    project_number: 'PRJ-2026-003',
-    isbn: '9780201616224',
-    book_title: 'The Pragmatic Programmer: 20th Anniversary',
-    client_name: 'Nordic Book Services',
-    project_type: 'Scanning',
-    department: 'Scanning',
-    assigned_to: 5,
-    assignedEmployee: { id: 5, name: 'Priya Patel' },
-    manager: 2,
-    managerUser: { id: 2, name: 'Maya Manager' },
-    priority: 'Normal',
-    status: 'Completed',
-    workflow_stage: 'Delivered',
-    completion_percentage: 100,
-    due_date: '2026-09-04',
-    actual_delivery: '2026-09-03',
-    health_score: 99,
-    health_category: 'Excellent',
-    health_risk: 'Low Risk',
-    days_remaining: 0,
-    due_label: 'Delivered On-Time',
-    due_color: '#16a34a',
-    recommendations: ['Delivery complete. Archived into cold storage.']
-  },
-  {
-    id: 104,
-    project_number: 'PRJ-2026-004',
-    isbn: '9780596517748',
-    book_title: 'JavaScript: The Good Parts',
-    client_name: 'Pacific Tech Media',
-    project_type: 'Cover Design',
-    department: 'Cover Design',
-    assigned_to: 8,
-    assignedEmployee: { id: 8, name: 'Dana Cruz' },
-    manager: 3,
-    managerUser: { id: 3, name: 'Ravi Rao' },
-    priority: 'High',
-    status: 'QC',
-    workflow_stage: 'QC',
-    completion_percentage: 80,
-    due_date: '2026-09-06',
-    actual_delivery: undefined,
-    health_score: 62,
-    health_category: 'Needs Attention',
-    health_risk: 'Medium Risk',
-    days_remaining: -1,
-    due_label: 'Overdue by 1 day',
-    due_color: '#ef4444',
-    delay_days: 1,
-    recommendations: ['Immediate manager intervention required for overdue QC check.']
-  },
-  {
-    id: 105,
-    project_number: 'PRJ-2026-005',
-    isbn: '9781449331818',
-    book_title: 'Learning JavaScript Design Patterns',
-    client_name: 'Berlin University Press',
-    project_type: 'QAG',
-    department: 'QAG',
-    assigned_to: 9,
-    assignedEmployee: { id: 9, name: 'Omar Khan' },
-    manager: 2,
-    managerUser: { id: 2, name: 'Maya Manager' },
-    priority: 'Normal',
-    status: 'In Progress',
-    workflow_stage: 'Scanning',
-    completion_percentage: 30,
-    due_date: '2026-09-20',
-    actual_delivery: undefined,
-    health_score: 75,
-    health_category: 'Healthy',
-    health_risk: 'Low Risk',
-    days_remaining: 13,
-    due_label: 'Due in 13 days',
-    due_color: '#16a34a',
-    recommendations: ['Proceed with intake scan OCR validation.']
-  }
-];
+const RAW_MOCK_PROJECTS: any[] = [];
 
 export const MOCK_PROJECTS: Project[] = RAW_MOCK_PROJECTS.map(normalizeProject);
 
@@ -278,90 +136,20 @@ const api = {
       }
       return res;
     } catch (e) {
-      if (url === '/users') {
-        return { data: MOCK_USERS };
+            if (url === '/users') {
+        return { data: [] };
       }
       if (url === '/delivery-status' || url === '/reports/delivery-status' || url.includes('delivery-status')) {
-        const delivered = localProjects
-          .filter((p) => p.status === 'Completed' || p.workflow_stage === 'Delivered' || !!p.actual_delivery)
-          .map((p) => ({
-            id: p.id,
-            isbn: p.isbn,
-            book_title: p.book_title,
-            project_number: p.project_number,
-            due_date: p.due_date,
-            actual_delivery: p.actual_delivery || p.due_date,
-            onTime: !p.delay_days || p.delay_days <= 0
-          }));
-        const notDelivered = localProjects
-          .filter((p) => p.status !== 'Completed' && p.workflow_stage !== 'Delivered' && !p.actual_delivery)
-          .map((p) => ({
-            id: p.id,
-            isbn: p.isbn,
-            book_title: p.book_title,
-            project_number: p.project_number,
-            due_date: p.due_date,
-            remaining_days: p.remaining_days ?? 5,
-            due_label: p.health?.daysRemaining?.label || (p.due_date ? `Due ${p.due_date}` : 'In Progress'),
-            due_color: p.health?.daysRemaining?.color || '#16a34a'
-          }));
-        return { data: { delivered, notDelivered } };
+        return { data: { delivered: [], notDelivered: [] } };
       }
       if (url.startsWith('/projects/')) {
-        const id = Number(url.split('/')[2]);
-        const found = localProjects.find((p) => p.id === id) || localProjects[0];
-        const project = normalizeProject(found);
-        const timeline = [
-          { id: 1, project_id: project.id, event: 'Intake and batch scanning logged', created_at: '2026-09-01T10:00:00Z', note: 'Batch intake completed' },
-          { id: 2, project_id: project.id, event: 'EPDF generation and OCR check', created_at: '2026-09-03T16:30:00Z', note: 'OCR verified' },
-          { id: 3, project_id: project.id, event: 'Milestone milestone QC inspection', created_at: '2026-09-05T11:20:00Z', note: 'Passed initial visual QC' }
-        ];
-        return { data: { project, timeline } };
+        return { data: { project: null, timeline: [] } };
       }
       if (url.startsWith('/projects') || url === '/projects') {
-        const params = config?.params || {};
-        let items = localProjects.map(normalizeProject);
-        if (params.q || params.search) {
-          const s = String(params.q || params.search).toLowerCase();
-          items = items.filter(
-            (p) =>
-              p.book_title.toLowerCase().includes(s) ||
-              p.project_number.toLowerCase().includes(s) ||
-              (p.isbn && p.isbn.toLowerCase().includes(s)) ||
-              (p.client_name && p.client_name.toLowerCase().includes(s))
-          );
-        }
-        if (params.status && params.status !== 'All' && params.status !== '') {
-          items = items.filter((p) => p.status === params.status);
-        }
-        if (params.priority && params.priority !== 'All' && params.priority !== '') {
-          items = items.filter((p) => p.priority === params.priority);
-        }
-        if (params.department && params.department !== 'All' && params.department !== '') {
-          items = items.filter((p) => p.department === params.department);
-        }
-        if (params.workflow_stage && params.workflow_stage !== 'All' && params.workflow_stage !== '') {
-          items = items.filter((p) => p.workflow_stage === params.workflow_stage);
-        }
-        if (params.project_type && params.project_type !== 'All' && params.project_type !== '') {
-          items = items.filter((p) => p.project_type === params.project_type);
-        }
-        if (params.health_category && params.health_category !== '') {
-          items = items.filter((p) => p.health.category === params.health_category);
-        }
-        if (params.assigned_to && params.assigned_to !== '') {
-          items = items.filter((p) => String(p.assigned_to) === String(params.assigned_to));
-        }
-        if (params.manager && params.manager !== '') {
-          items = items.filter((p) => String(p.manager) === String(params.manager));
-        }
-        const page = Number(params.page) || 1;
-        const limit = Number(params.limit) || 20;
-        const start = (page - 1) * limit;
         return {
           data: {
-            items: items.slice(start, start + limit),
-            total: items.length
+            items: [],
+            total: 0
           }
         };
       }

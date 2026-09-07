@@ -36,14 +36,6 @@ export default function DataTable({
     );
   }
 
-  if (!rows || rows.length === 0) {
-    return (
-      <div className="card">
-        <EmptyState title={emptyTitle} description={emptyDescription} />
-      </div>
-    );
-  }
-
   return (
     <div className="card overflow-hidden">
       <div className="overflow-x-auto">
@@ -78,19 +70,30 @@ export default function DataTable({
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
-            {rows.map((row) => (
-              <tr
-                key={row.id}
-                onClick={() => onRowClick?.(row)}
-                className={onRowClick ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors' : ''}
-              >
-                {columns.map((col) => (
-                  <td key={col.key} className={`px-4 py-3 whitespace-nowrap ${col.className || ''}`}>
-                    {col.render ? col.render(row) : row[col.key]}
-                  </td>
-                ))}
+            {(!rows || rows.length === 0) ? (
+              <tr>
+                <td colSpan={columns.length} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                  <div className="flex flex-col items-center justify-center gap-1">
+                    <span className="font-semibold text-sm">{emptyTitle}</span>
+                    {emptyDescription && <span className="text-xs text-gray-400">{emptyDescription}</span>}
+                  </div>
+                </td>
               </tr>
-            ))}
+            ) : (
+              rows.map((row) => (
+                <tr
+                  key={row.id}
+                  onClick={() => onRowClick?.(row)}
+                  className={onRowClick ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors' : ''}
+                >
+                  {columns.map((col) => (
+                    <td key={col.key} className={`px-4 py-3 whitespace-nowrap ${col.className || ''}`}>
+                      {col.render ? col.render(row) : row[col.key]}
+                    </td>
+                  ))}
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>

@@ -74,7 +74,9 @@ export const ErrorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved) as ErrorReport[];
-        return parsed.map((err) => ({
+        const isSampleError = (e: any) => String(e.id).startsWith('ERR-0012') || e.description?.includes('OCR baseline drift') || e.chapter?.includes('Mindfulness in Space');
+        const nonSample = parsed.filter(e => !isSampleError(e));
+        return nonSample.map((err) => ({
           ...err,
           attachments: (err.attachments || []).map((att) => {
             const isInitialSample = INITIAL_ERRORS.some((e) => e.attachments?.some((ea) => ea.id === att.id));

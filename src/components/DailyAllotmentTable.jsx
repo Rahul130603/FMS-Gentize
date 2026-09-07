@@ -322,7 +322,18 @@ export default function DailyAllotmentTable({
           </thead>
 
           <tbody>
-            {records.map((emp) => {
+            {(!records || records.length === 0) ? (
+              <tr>
+                <td colSpan={100} style={{ textAlign: 'center', padding: '48px 16px', color: '#64748b' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                    <SearchX size={32} className="text-slate-300" />
+                    <span style={{ fontWeight: '600', fontSize: '14px', color: '#334155' }}>No records found</span>
+                    <span style={{ fontSize: '12px', color: '#94a3b8' }}>No daily allotment records available for this date.</span>
+                  </div>
+                </td>
+              </tr>
+            ) : (
+              records.map((emp) => {
               const isSelected = selectedIds.includes(emp.id);
               const pendingSafe = calculatePending(emp.allocated, emp.completed, emp.wip);
               const completionPercent = calculateCompletionRate(emp.completed, emp.allocated);
@@ -490,7 +501,7 @@ export default function DailyAllotmentTable({
                   )}
                 </tr>
               );
-            })}
+            }))}
           </tbody>
         </table>
       </div>

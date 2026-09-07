@@ -76,7 +76,14 @@ export default function ManagerAttentionPanel({ records, onSelectEmployee }) {
         )}
       </div>
 
-      {attentionList.length === 0 ? (
+      {(!records || records.length === 0) ? (
+        <div className="attention-empty-card" style={{ color: '#64748b' }}>
+          <div className="attention-empty-text">
+            <strong>No data available</strong>
+            <span>No employee records found for this date.</span>
+          </div>
+        </div>
+      ) : attentionList.length === 0 ? (
         <div className="attention-empty-card">
           <CheckCircle2 size={24} className="text-emerald-500" />
           <div className="attention-empty-text">

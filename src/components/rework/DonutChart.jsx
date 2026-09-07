@@ -46,9 +46,15 @@ export default function DonutChart({ distribution }) {
         </span>
       </div>
 
-      <div className="flex items-center justify-center my-1">
-        <Chart options={options} series={series} type="donut" width="100%" height={160} />
-      </div>
+      {total > 0 ? (
+        <div className="flex items-center justify-center my-1">
+          <Chart options={options} series={series} type="donut" width="100%" height={160} />
+        </div>
+      ) : (
+        <div className="h-[160px] flex items-center justify-center text-xs text-slate-400">
+          No defect data available.
+        </div>
+      )}
 
       <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 text-center">
         <div>

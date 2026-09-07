@@ -51,7 +51,13 @@ export const api = {
   getMe: () => request('/auth/me'),
 
   // Report Summary
-  getSummary: () => request('/reports/summary'),
+  getSummary: async () => {
+    try {
+      return await request('/reports/summary');
+    } catch (e) {
+      return { data: { total: 0, positive: 0, negative: 0, avg_rating: 0 } };
+    }
+  },
 
   // Feedback Data Grid
   getFeedbackList: async (params = {}) => {
@@ -62,38 +68,20 @@ export const api = {
       }
     });
     try {
-      return await request(`/reports/feedback?${query.toString()}`);
+      const res = await request(`/reports/feedback?${query.toString()}`);
+      if (typeof res === 'string' || !res?.data) {
+        throw new Error('Invalid feedback response');
+      }
+      return res;
     } catch (e) {
-      // Offline fallback using INITIAL_CUSTOMER_FEEDBACK
-      const { INITIAL_CUSTOMER_FEEDBACK } = await import('../data/customerFeedbackData');
-      let filtered = [...INITIAL_CUSTOMER_FEEDBACK];
-      if (params.search) {
-        const s = params.search.toLowerCase();
-        filtered = filtered.filter(f => 
-          f.isbn.toLowerCase().includes(s) ||
-          f.title.toLowerCase().includes(s) ||
-          f.customer_name.toLowerCase().includes(s) ||
-          f.feedback_number.toLowerCase().includes(s)
-        );
-      }
-      if (params.feedbackType) {
-        filtered = filtered.filter(f => f.feedback_type === params.feedbackType);
-      }
-      if (params.rating) {
-        filtered = filtered.filter(f => String(f.rating) === String(params.rating));
-      }
-      const page = Number(params.page) || 1;
-      const limit = Number(params.limit) || 10;
-      const start = (page - 1) * limit;
-      const paged = filtered.slice(start, start + limit);
       return {
         success: true,
-        data: paged,
+        data: [],
         pagination: {
-          page,
-          limit,
-          total: filtered.length,
-          totalPages: Math.ceil(filtered.length / limit) || 1
+          page: Number(params.page) || 1,
+          limit: Number(params.limit) || 10,
+          total: 0,
+          totalPages: 1
         }
       };
     }

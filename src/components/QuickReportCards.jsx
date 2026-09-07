@@ -63,7 +63,7 @@ export default function QuickReportCards({ kpis }) {
       icon: CheckCircle2,
       iconBg: '#ecfdf5',
       iconColor: '#059669',
-      comparison: comparisons.completed || '↑ 12% vs yesterday',
+      comparison: comparisons.completed || '--',
       trendClass: comparisons.completedTrendClass || 'trend-up'
     },
     {

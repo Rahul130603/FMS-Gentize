@@ -149,7 +149,17 @@ export const FeedbackTable: React.FC<FeedbackTableProps> = ({
             </thead>
 
             <tbody className="divide-y divide-slate-100 bg-white">
-              {paginatedFeedback.map((item) => (
+              {paginatedFeedback.length === 0 ? (
+                <tr>
+                  <td colSpan={10} className="px-4 py-12 text-center text-slate-500">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <span className="font-semibold text-sm text-slate-700">No feedback records available</span>
+                      <span className="text-xs text-slate-400">No internal feedback entries match the selected filters.</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                paginatedFeedback.map((item) => (
                 <tr
                   key={item.id}
                   className="hover:bg-slate-50/80 transition-colors group cursor-pointer"
@@ -307,7 +317,7 @@ export const FeedbackTable: React.FC<FeedbackTableProps> = ({
                     </div>
                   </td>
                 </tr>
-              ))}
+              )))}
             </tbody>
           </table>
         </div>

@@ -25,9 +25,7 @@ export default function ProjectTable({
 
   const projectList = Array.isArray(projects) ? projects : [];
 
-  if (!projectList.length) {
-    return <div className="empty-state">No projects match the current filters.</div>;
-  }
+
 
   return (
     <div className="table-wrap">
@@ -56,7 +54,14 @@ export default function ProjectTable({
           </tr>
         </thead>
         <tbody>
-          {projectList.map((p) => {
+          {projectList.length === 0 ? (
+            <tr>
+              <td colSpan={19} className="empty-state" style={{ textAlign: 'center', padding: '48px 16px', color: '#64748b' }}>
+                No records found
+              </td>
+            </tr>
+          ) : (
+            projectList.map((p) => {
             const health = p.health || {
               score: (p as any).health_score ?? 85,
               category: (p as any).health_category ?? 'Healthy',
@@ -115,7 +120,7 @@ export default function ProjectTable({
                 </td>
               </tr>
             );
-          })}
+          }))}
         </tbody>
       </table>
     </div>

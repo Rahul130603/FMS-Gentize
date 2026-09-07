@@ -118,9 +118,8 @@ export function MyReport() {
 
   // Dynamic unique client names list for searchable combobox
   const availableClients = useMemo(() => {
-    const clientsFromProjects = myProjects.map(p => p.client).filter(Boolean);
-    const combined = Array.from(new Set([...clientsFromProjects, ...PUBLISHING_CLIENTS]));
-    return combined.sort((a, b) => a.localeCompare(b));
+    const clientsFromProjects = myProjects.map(p => p.client || p.publisher).filter(Boolean);
+    return Array.from(new Set(clientsFromProjects)).sort((a, b) => a.localeCompare(b));
   }, [myProjects]);
 
   // Filtered dataset based on applied filters

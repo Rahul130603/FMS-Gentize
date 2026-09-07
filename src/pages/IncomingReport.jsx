@@ -144,6 +144,12 @@ export function IncomingReport() {
     });
   }, [incomingProjects, appliedFilters]);
 
+  // Dynamic client options from actual projects
+  const availableClients = useMemo(() => {
+    const clientsFromProjects = incomingProjects.map(p => p.client || p.publisher).filter(Boolean);
+    return Array.from(new Set(clientsFromProjects)).sort((a, b) => a.localeCompare(b));
+  }, [incomingProjects]);
+
   // Handle Export to CSV
   const handleExport = () => {
     const exportColumns = [
@@ -424,7 +430,7 @@ export function IncomingReport() {
           <FilterInput
             label="Project ID"
             id="projectId"
-            placeholder="e.g. PRJ-1024"
+            placeholder="Search Project ID..."
             icon={Search}
             value={filterValues.projectId}
             onChange={(val) => setFilterValues(prev => ({ ...prev, projectId: val }))}
@@ -446,7 +452,7 @@ export function IncomingReport() {
             id="client"
             value={filterValues.client}
             allLabel="All Publishers & Clients"
-            options={PUBLISHING_CLIENTS}
+            options={availableClients}
             onChange={(val) => setFilterValues(prev => ({ ...prev, client: val }))}
           />
 

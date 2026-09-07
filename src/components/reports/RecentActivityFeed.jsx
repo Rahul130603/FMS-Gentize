@@ -42,61 +42,67 @@ export function RecentActivityFeed({ activities = [], title = 'Recent Publishing
       </div>
 
       <div className="p-5">
-        <div className="flow-root">
-          <ul role="list" className="-mb-8">
-            {activities.map((item, idx) => {
-              const IconComponent = ICON_MAP[item.icon] || Clock;
-              const isLast = idx === activities.length - 1;
+        {activities.length === 0 ? (
+          <div className="py-8 text-center text-xs text-slate-400">
+            No recent activity updates.
+          </div>
+        ) : (
+          <div className="flow-root">
+            <ul role="list" className="-mb-8">
+              {activities.map((item, idx) => {
+                const IconComponent = ICON_MAP[item.icon] || Clock;
+                const isLast = idx === activities.length - 1;
 
-              return (
-                <li key={item.id || idx}>
-                  <div className="relative pb-8">
-                    {!isLast && (
-                      <span
-                        className="absolute left-4 top-4 -ml-px h-full w-0.5 bg-slate-200"
-                        aria-hidden="true"
-                      />
-                    )}
-                    <div className="relative flex items-start space-x-3.5">
-                      {/* Icon */}
-                      <div>
-                        <div
-                          className={`relative px-1 flex h-8 w-8 items-center justify-center rounded-full border shadow-xs ${
-                            item.color || 'bg-slate-100 text-slate-600 border-slate-200'
-                          }`}
-                        >
-                          <IconComponent className="h-4 w-4" aria-hidden="true" />
-                        </div>
-                      </div>
-
-                      {/* Content */}
-                      <div className="min-w-0 flex-1 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 pt-0.5">
+                return (
+                  <li key={item.id || idx}>
+                    <div className="relative pb-8">
+                      {!isLast && (
+                        <span
+                          className="absolute left-4 top-4 -ml-px h-full w-0.5 bg-slate-200"
+                          aria-hidden="true"
+                        />
+                      )}
+                      <div className="relative flex items-start space-x-3.5">
+                        {/* Icon */}
                         <div>
-                          <p className="text-xs font-medium text-slate-900">
-                            <span className="font-semibold text-slate-800">{item.activity}</span>
-                            {item.user && (
-                              <span className="text-slate-500 font-normal"> by {item.user}</span>
-                            )}
-                          </p>
-                          <p className="text-xs text-brand-700 font-mono mt-0.5">
-                            {item.project}
-                          </p>
+                          <div
+                            className={`relative px-1 flex h-8 w-8 items-center justify-center rounded-full border shadow-xs ${
+                              item.color || 'bg-slate-100 text-slate-600 border-slate-200'
+                            }`}
+                          >
+                            <IconComponent className="h-4 w-4" aria-hidden="true" />
+                          </div>
                         </div>
 
-                        <div className="flex items-center gap-3 shrink-0 mt-1 sm:mt-0">
-                          {item.status && <StatusBadge status={item.status} size="sm" />}
-                          <time className="text-[11px] text-slate-400 font-medium whitespace-nowrap">
-                            {item.timestamp}
-                          </time>
+                        {/* Content */}
+                        <div className="min-w-0 flex-1 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 pt-0.5">
+                          <div>
+                            <p className="text-xs font-medium text-slate-900">
+                              <span className="font-semibold text-slate-800">{item.activity}</span>
+                              {item.user && (
+                                <span className="text-slate-500 font-normal"> by {item.user}</span>
+                              )}
+                            </p>
+                            <p className="text-xs text-brand-700 font-mono mt-0.5">
+                              {item.project}
+                            </p>
+                          </div>
+
+                          <div className="flex items-center gap-3 shrink-0 mt-1 sm:mt-0">
+                            {item.status && <StatusBadge status={item.status} size="sm" />}
+                            <time className="text-[11px] text-slate-400 font-medium whitespace-nowrap">
+                              {item.timestamp}
+                            </time>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -51,9 +51,9 @@ export const ReportIssueModal: React.FC<ReportIssueModalProps> = ({
 
   // Left Column States (Issue Diagnostics & Location)
   const [projectType, setProjectType] = useState<string>('Scan');
-  const [chapter, setChapter] = useState<string>('Chapter 04: Mindfulness in Space');
-  const [serverLocation, setServerLocation] = useState<string>('/server/epub/batch-1400/ch04.xhtml');
-  const [isbnNumber, setIsbnNumber] = useState<string>('978-0-14-312774-1');
+  const [chapter, setChapter] = useState<string>('');
+  const [serverLocation, setServerLocation] = useState<string>('');
+  const [isbnNumber, setIsbnNumber] = useState<string>('');
   const [description, setDescription] = useState<string>('');
   const [expectedResult, setExpectedResult] = useState<string>('');
   const [actualResult, setActualResult] = useState<string>('');
@@ -63,7 +63,7 @@ export const ReportIssueModal: React.FC<ReportIssueModalProps> = ({
   const [source, setSource] = useState<ErrorSource>('QA');
   const [assignedTo, setAssignedTo] = useState<string>('Priya S.');
   const [priority, setPriority] = useState<Priority>('High');
-  const [targetDueDate, setTargetDueDate] = useState<string>('2026-09-08');
+  const [targetDueDate, setTargetDueDate] = useState<string>('');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -86,7 +86,7 @@ export const ReportIssueModal: React.FC<ReportIssueModalProps> = ({
       setSource(initialData.source || 'QA');
       setAssignedTo(initialData.assignedTo || 'Priya S.');
       setPriority(initialData.priority || 'High');
-      setTargetDueDate(initialData.dueDate || '2026-09-08');
+      setTargetDueDate(initialData.dueDate || '');
       setAttachments(initialData.attachments || []);
     } else {
       resetForm();
@@ -95,9 +95,9 @@ export const ReportIssueModal: React.FC<ReportIssueModalProps> = ({
 
   const resetForm = () => {
     setProjectType('Scan');
-    setChapter('Chapter 01: Introduction');
-    setServerLocation('/server/scan/batch-1400/ch01.xhtml');
-    setIsbnNumber('978-93-12345-67-8');
+    setChapter('');
+    setServerLocation('');
+    setIsbnNumber('');
     setDescription('');
     setExpectedResult('');
     setActualResult('');
@@ -105,7 +105,7 @@ export const ReportIssueModal: React.FC<ReportIssueModalProps> = ({
     setSource('QA');
     setAssignedTo('Priya S.');
     setPriority('High');
-    setTargetDueDate('2026-09-08');
+    setTargetDueDate('');
     setAttachments([]);
     setErrors({});
   };

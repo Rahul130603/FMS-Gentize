@@ -68,7 +68,7 @@ export const Header: React.FC<HeaderProps> = ({
                 }}
                 className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 flex items-center justify-between text-slate-700 hover:text-indigo-600 font-medium"
               >
-                <span>All Active Projects (7 Books)</span>
+                <span>All Active Projects{INITIAL_BOOKS.length > 0 ? ` (${INITIAL_BOOKS.length} Books)` : ''}</span>
                 {selectedBook === 'All Active Projects' && <span className="w-1.5 h-1.5 rounded-full bg-indigo-600" />}
               </button>
               {INITIAL_BOOKS.map((book) => (

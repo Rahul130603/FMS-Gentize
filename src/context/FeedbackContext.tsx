@@ -81,17 +81,29 @@ const initialFilters: FeedbackFilters = {
 
 const FeedbackContext = createContext<FeedbackContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'pubvantage_internal_feedback_v6';
+const STORAGE_KEY = 'pubvantage_internal_feedback_v7';
 
 export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { addToast } = useToast();
 
   const [feedback, setFeedback] = useState<InternalFeedbackItem[]>(() => {
+    // Clear legacy storage keys containing hardcoded sample data
+    try {
+      ['pubvantage_internal_feedback_v6', 'pubvantage_internal_feedback_v5', 'pubvantage_internal_feedback_v4', 'pubvantage_internal_feedback_v3', 'pubvantage_internal_feedback_v2', 'pubvantage_internal_feedback_v1'].forEach((k) => {
+        localStorage.removeItem(k);
+      });
+    } catch {}
+
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved) as InternalFeedbackItem[];
-        const isSampleFeedback = (f: any) => String(f.id).startsWith('FDB-0008') || f.title?.includes('accessibility warnings');
+        const isSampleFeedback = (f: any) => {
+          const id = String(f.id || '');
+          return id.startsWith('FDB-0008') ||
+            f.title?.includes('accessibility warnings') ||
+            f.attachments?.some((att: any) => att.source === 'sample');
+        };
         const nonSample = parsed.filter(f => !isSampleFeedback(f));
         return nonSample.map((item) => ({
           ...item,
@@ -99,69 +111,18 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           rootCause: item.rootCause || (item as any).problemCurrentExperience || item.description || '',
           preventiveAction: item.preventiveAction || (item as any).suggestedImprovement || '',
           correctiveAction: item.correctiveAction || item.suggestedSolution || (item as any).suggestedImprovement || '',
-          attachments: (item.attachments || []).map((att) => {
-            const isInitialSample = INITIAL_FEEDBACK.some((f) => f.attachments?.some((fa) => fa.id === att.id));
-            const safeSource = isInitialSample ? 'sample' : (att.source || 'upload');
-            // Clean any legacy synthetic fileData so it never interferes with real files
-            const safeFileData = att.fileData && (att.fileData.includes('PubVantage') || att.fileData.includes('Automated%20PDF') || att.fileData.includes('JVBERi0xLjQKMSAwIG9iajw8L1R5cGU'))
-              ? undefined
-              : att.fileData;
-            return {
-              ...att,
-              source: safeSource,
-              fileData: safeFileData,
-              storageKey: att.storageKey,
-              fileId: att.fileId || att.id
-            };
-          })
+          attachments: (item.attachments || []).map((att) => ({
+            ...att,
+            source: att.source || 'upload',
+            storageKey: att.storageKey,
+            fileId: att.fileId || att.id
+          }))
         }));
-      }
-
-      // Upgrade from prior versions: preserve user-submitted feedback while updating sample records with consistent metadata
-      const prevSaved =
-        localStorage.getItem('pubvantage_internal_feedback_v5') ||
-        localStorage.getItem('pubvantage_internal_feedback_v4') ||
-        localStorage.getItem('pubvantage_internal_feedback_v3') ||
-        localStorage.getItem('pubvantage_internal_feedback_v2');
-      if (prevSaved) {
-        const parsed = JSON.parse(prevSaved) as InternalFeedbackItem[];
-        const initialMap = new Map(INITIAL_FEEDBACK.map((f) => [f.id, f]));
-        const merged = parsed.map((item) => {
-          const sample = initialMap.get(item.id);
-          if (sample) {
-            return {
-              ...item,
-              category: sample.category,
-              attachments: sample.attachments,
-              submittedBy: sample.submittedBy,
-              team: sample.team,
-              priority: sample.priority,
-              owner: sample.owner,
-              rootCause: sample.rootCause,
-              preventiveAction: sample.preventiveAction,
-              correctiveAction: sample.correctiveAction
-            };
-          }
-          return {
-            ...item,
-            category: normalizeCategory(item.category),
-            rootCause: item.rootCause || (item as any).problemCurrentExperience || item.description || '',
-            preventiveAction: item.preventiveAction || (item as any).suggestedImprovement || '',
-            correctiveAction: item.correctiveAction || item.suggestedSolution || (item as any).suggestedImprovement || '',
-            attachments: (item.attachments || []).map((att) => ({
-              ...att,
-              source: att.source || 'upload',
-              storageKey: att.storageKey,
-              fileId: att.fileId || att.id
-            }))
-          };
-        });
-        return merged;
       }
     } catch (e) {
       console.error('Failed to parse saved feedback:', e);
     }
-    return INITIAL_FEEDBACK;
+    return [];
   });
 
   const [selectedFeedback, setSelectedFeedbackState] = useState<InternalFeedbackItem | null>(null);

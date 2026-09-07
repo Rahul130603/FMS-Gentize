@@ -63,68 +63,41 @@ const initialFilters: ErrorFilters = {
 
 const ErrorContext = createContext<ErrorContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'pubvantage_error_reports_v6';
+const STORAGE_KEY = 'pubvantage_error_reports_v7';
 const CURRENT_USER = 'Priya S.'; // Current user session
 
 export const ErrorProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { addToast } = useToast();
 
   const [errors, setErrors] = useState<ErrorReport[]>(() => {
+    // Clear legacy storage keys containing hardcoded sample data
+    try {
+      ['pubvantage_error_reports_v6', 'pubvantage_error_reports_v5', 'pubvantage_error_reports_v4', 'pubvantage_error_reports_v3', 'pubvantage_error_reports_v2', 'pubvantage_error_reports_v1'].forEach((k) => {
+        localStorage.removeItem(k);
+      });
+    } catch {}
+
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved) as ErrorReport[];
-        const isSampleError = (e: any) => String(e.id).startsWith('ERR-0012') || e.description?.includes('OCR baseline drift') || e.chapter?.includes('Mindfulness in Space');
-        const nonSample = parsed.filter(e => !isSampleError(e));
-        return nonSample.map((err) => ({
-          ...err,
-          attachments: (err.attachments || []).map((att) => {
-            const isInitialSample = INITIAL_ERRORS.some((e) => e.attachments?.some((ea) => ea.id === att.id));
-            const safeSource = isInitialSample ? 'sample' : (att.source || 'upload');
-            // Clean any legacy synthetic fileData so it never interferes with real files
-            const safeFileData = att.fileData && (att.fileData.includes('PubVantage') || att.fileData.includes('Automated%20PDF') || att.fileData.includes('JVBERi0xLjQKMSAwIG9iajw8L1R5cGU'))
-              ? undefined
-              : att.fileData;
-            return {
-              ...att,
-              source: safeSource,
-              fileData: safeFileData,
-              storageKey: att.storageKey,
-              fileId: att.fileId || att.id
-            };
-          })
-        }));
-      }
-
-      // Upgrade from v5: preserve user-created issues while refreshing sample attachments with valid URLs
-      const prevSaved = localStorage.getItem('pubvantage_error_reports_v5');
-      if (prevSaved) {
-        const parsed = JSON.parse(prevSaved) as ErrorReport[];
-        const initialMap = new Map(INITIAL_ERRORS.map((e) => [e.id, e]));
-        const merged = parsed.map((err) => {
-          const sample = initialMap.get(err.id);
-          if (sample) {
-            return {
-              ...err,
-              attachments: sample.attachments
-            };
-          }
-          return {
-            ...err,
-            attachments: (err.attachments || []).map((att) => ({
-              ...att,
-              source: att.source || 'upload',
-              storageKey: att.storageKey,
-              fileId: att.fileId || att.id
-            }))
-          };
-        });
-        return merged;
+        const isSampleError = (e: any) => {
+          const id = String(e.id || '');
+          return id.startsWith('ERR-001') ||
+            e.attachments?.some((att: any) => att.source === 'sample') ||
+            e.serverLocation?.startsWith('/server/') ||
+            e.chapter?.includes('Mindfulness in Space') ||
+            e.description?.includes('Total Area Coverage') ||
+            e.description?.includes('Skew distortion') ||
+            e.description?.includes('Broken internal cross-reference') ||
+            e.description?.includes('OCR baseline drift');
+        };
+        return parsed.filter(e => !isSampleError(e));
       }
     } catch (e) {
       console.error('Failed to parse saved errors:', e);
     }
-    return INITIAL_ERRORS;
+    return [];
   });
 
   const [selectedError, setSelectedErrorState] = useState<ErrorReport | null>(null);

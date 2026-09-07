@@ -1,1 +1,0 @@
-export const INITIAL_CUSTOMER_FEEDBACK = [];

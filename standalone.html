@@ -1,0 +1,1417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DELIVERY PRODUCTION COUNT</title>
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- ApexCharts CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f9ff',
+              100: '#e0f2fe',
+              500: '#0ea5e9',
+              600: '#0284c7',
+              700: '#0369a1'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #f8fafc;
+      color: #1e293b;
+      font-size: 13px;
+    }
+    .text-2xs {
+      font-size: 11px;
+      line-height: 14px;
+    }
+    .shadow-2xs {
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+    }
+    /* Custom thin scrollbars */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: #f8fafc; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .dropdown-scroll::-webkit-scrollbar { width: 4px; }
+    .dropdown-scroll::-webkit-scrollbar-track { background: transparent; }
+    .dropdown-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .dropdown-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; }
+
+    .apexcharts-legend {
+      justify-content: flex-start !important;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-50 font-sans antialiased flex flex-col text-slate-800">
+
+  <!-- ==================== 1. TOP HEADER BAR ==================== -->
+  <header class="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between shrink-0 sticky top-0 z-30 shadow-2xs">
+    
+    <!-- Left: Title & Subtitle with Icon Badge -->
+    <div class="flex items-center space-x-3">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white flex items-center justify-center font-bold shadow-md shadow-blue-500/20">
+        <i data-lucide="truck" class="w-5 h-5 text-white"></i>
+      </div>
+      <div>
+        <div class="flex items-center space-x-2">
+          <h1 class="text-base font-black text-slate-900 leading-tight tracking-tight">DELIVERY PRODUCTION COUNT</h1>
+          <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-100 text-blue-800 border border-blue-200">
+            Production Desk
+          </span>
+        </div>
+        <p class="text-2xs text-slate-400">Monitor customer deliveries, production counts and delivery history • Day / Week / Month</p>
+      </div>
+    </div>
+
+    <!-- Right: Header Controls -->
+    <div class="flex items-center space-x-3">
+      
+      <!-- Date Range Selector Badge -->
+      <div class="flex items-center space-x-1">
+        <button type="button" onclick="navigateDateRange(-1)" 
+                class="p-1.5 rounded-lg border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 text-slate-500 hover:text-blue-600 transition-all shadow-2xs cursor-pointer flex items-center justify-center" 
+                title="Previous Range">
+          <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
+        </button>
+
+        <button type="button" onclick="showToast('Active range: 01 Sep 2026 - 07 Sep 2026')"
+                class="flex items-center border border-slate-200 hover:border-slate-300 rounded-lg px-3 py-1.5 bg-white text-xs font-semibold text-slate-700 space-x-2 cursor-pointer transition-all hover:bg-slate-50 shadow-2xs group">
+          <i data-lucide="calendar" class="w-3.5 h-3.5 text-blue-600"></i>
+          <span id="headerDateRangeDisplay">01 Sep 2026 - 07 Sep 2026</span>
+          <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 transition-colors"></i>
+        </button>
+
+        <button type="button" onclick="navigateDateRange(1)" 
+                class="p-1.5 rounded-lg border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 text-slate-500 hover:text-blue-600 transition-all shadow-2xs cursor-pointer flex items-center justify-center" 
+                title="Next Range">
+          <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+        </button>
+      </div>
+
+      <!-- Refresh Button -->
+      <button onclick="handleRefresh()" id="refreshBtn" class="flex items-center space-x-1.5 border border-slate-200 rounded-lg px-3 py-1.5 bg-white text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer">
+        <i data-lucide="refresh-cw" id="refreshIcon" class="w-3.5 h-3.5 text-slate-500"></i>
+        <span>Refresh</span>
+      </button>
+
+      <!-- Export Button with Dropdown -->
+      <div class="relative" id="exportContainer">
+        <button onclick="toggleExportMenu(event)" class="flex items-center space-x-1.5 border border-slate-200 rounded-lg px-3 py-1.5 bg-white text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer">
+          <i data-lucide="download" class="w-3.5 h-3.5 text-slate-500"></i>
+          <span>Export</span>
+          <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400"></i>
+        </button>
+        <div id="exportMenu" class="hidden absolute right-0 mt-1.5 w-44 bg-white/95 backdrop-blur-md border border-slate-200 rounded-xl shadow-xl z-50 py-1">
+          <button onclick="triggerExport('csv')" class="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 hover:text-blue-600 flex items-center space-x-2">
+            <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5 text-emerald-600"></i>
+            <span>Export CSV</span>
+          </button>
+          <button onclick="triggerExport('excel')" class="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 hover:text-blue-600 flex items-center space-x-2">
+            <i data-lucide="file-text" class="w-3.5 h-3.5 text-blue-600"></i>
+            <span>Export Excel</span>
+          </button>
+          <button onclick="triggerExport('pdf')" class="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 hover:text-blue-600 flex items-center space-x-2">
+            <i data-lucide="file" class="w-3.5 h-3.5 text-rose-600"></i>
+            <span>Export PDF</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+  </header>
+
+  <!-- ==================== 2. MAIN DASHBOARD CONTENT ==================== -->
+  <main class="flex-1 overflow-y-auto max-w-[1600px] w-full mx-auto p-6 space-y-5">
+
+    <!-- ==================== GLOBAL FILTER PANEL ==================== -->
+    <section class="bg-white rounded-xl border border-slate-200/90 shadow-2xs p-4">
+      
+      <!-- Top Strip: Scope & Focus -->
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 mb-4 border-b border-slate-100">
+        <div class="flex items-center space-x-2">
+          <span class="text-xs font-bold text-slate-700 flex items-center space-x-1.5">
+            <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5 text-blue-600"></i>
+            <span>Delivery Filter Scope:</span>
+          </span>
+          <div class="inline-flex p-0.5 bg-slate-100 rounded-lg border border-slate-200 text-xs font-semibold">
+            <button type="button" onclick="quickFilterDate('today')" id="quickToday" class="px-2.5 py-1 rounded-md text-xs font-medium text-slate-600 hover:text-slate-900 transition-all cursor-pointer">Today</button>
+            <button type="button" onclick="quickFilterDate('week')" id="quickWeek" class="px-2.5 py-1 rounded-md text-xs font-bold bg-white text-blue-700 shadow-2xs transition-all cursor-pointer">This Week</button>
+            <button type="button" onclick="quickFilterDate('month')" id="quickMonth" class="px-2.5 py-1 rounded-md text-xs font-medium text-slate-600 hover:text-slate-900 transition-all cursor-pointer">This Month</button>
+          </div>
+        </div>
+
+        <div class="text-2xs text-slate-400 font-medium flex items-center space-x-2">
+          <span>Active Filter:</span>
+          <span id="activeFilterBadge" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-2xs font-bold bg-blue-50 text-blue-700 border border-blue-100">
+            This Week • All Types • All Customers
+          </span>
+        </div>
+      </div>
+
+      <!-- Filter Controls Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        <!-- Delivery Date Range -->
+        <div class="space-y-1">
+          <label class="text-2xs font-bold uppercase tracking-wider text-slate-500 flex items-center justify-between">
+            <span>Delivery Date</span>
+            <span class="text-[10px] text-blue-600 font-semibold cursor-pointer hover:underline" onclick="quickFilterDate('today')">Today</span>
+          </label>
+          <div class="relative flex items-center">
+            <select id="filterDateRange" onchange="applyGlobalFilters()" 
+                    class="w-full text-xs rounded-lg border border-slate-200 px-3 py-2 text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-hidden font-medium cursor-pointer transition-all bg-white hover:border-slate-300 pr-8">
+              <option value="today">Today</option>
+              <option value="yesterday">Yesterday</option>
+              <option value="last7">Last 7 Days</option>
+              <option value="week" selected>This Week</option>
+              <option value="month">This Month</option>
+              <option value="custom">Custom Range</option>
+            </select>
+          </div>
+          <div class="text-[10px] font-semibold text-blue-600 truncate" id="filterDateHint">
+            Period: 01 Sep 2026 - 07 Sep 2026
+          </div>
+        </div>
+
+        <!-- Production Type -->
+        <div class="space-y-1">
+          <label class="text-2xs font-bold uppercase tracking-wider text-slate-500 flex items-center justify-between">
+            <span>Production Type</span>
+            <span class="text-[10px] text-blue-600 font-semibold cursor-pointer hover:underline" onclick="resetTypeFilter()">All</span>
+          </label>
+          <div class="relative flex items-center">
+            <select id="filterProdType" onchange="applyGlobalFilters()" 
+                    class="w-full text-xs rounded-lg border border-slate-200 px-3 py-2 text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-hidden font-semibold transition-all bg-white hover:border-slate-300 pr-8">
+              <option value="all" selected>All Production Types</option>
+              <option value="POD">POD (Print-on-Demand)</option>
+              <option value="EPDF">EPDF (Electronic PDF)</option>
+              <option value="SCANNED FILE">SCANNED FILE</option>
+              <option value="E-ISBN">E-ISBN</option>
+            </select>
+          </div>
+          <div class="text-[10px] text-slate-400 font-medium">POD, EPDF, Scanned, E-ISBN</div>
+        </div>
+
+        <!-- Customer -->
+        <div class="space-y-1">
+          <label class="text-2xs font-bold uppercase tracking-wider text-slate-500 flex items-center justify-between">
+            <span>Customer</span>
+            <span class="text-[10px] text-blue-600 font-semibold cursor-pointer hover:underline" onclick="resetCustomerFilter()">All</span>
+          </label>
+          <div class="relative flex items-center">
+            <select id="filterCustomer" onchange="applyGlobalFilters()" 
+                    class="w-full text-xs rounded-lg border border-slate-200 px-3 py-2 text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-hidden font-semibold transition-all bg-white hover:border-slate-300 pr-8">
+              <option value="all" selected>All Customers</option>
+              <option value="ABC Publishing">ABC Publishing</option>
+              <option value="XYZ Books">XYZ Books</option>
+              <option value="Global Publications">Global Publications</option>
+              <option value="Prime Publishers">Prime Publishers</option>
+              <option value="Sunrise Publications">Sunrise Publications</option>
+              <option value="Knowledge House">Knowledge House</option>
+            </select>
+          </div>
+          <div class="text-[10px] text-slate-400 font-medium">6 Registered Publishing Clients</div>
+        </div>
+
+        <!-- Search with Action Buttons -->
+        <div class="space-y-1">
+          <label class="text-2xs font-bold uppercase tracking-wider text-slate-500">Search File or Customer</label>
+          <div class="flex items-center space-x-2">
+            <div class="relative flex-1">
+              <i data-lucide="search" class="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"></i>
+              <input type="text" id="globalSearchInput" oninput="applyGlobalFilters()" placeholder="Search title, ISBN, client..." 
+                     class="w-full text-xs rounded-lg border border-slate-200 pl-8 pr-7 py-2 text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-hidden font-medium bg-white hover:border-slate-300 transition-all">
+              <span onclick="clearGlobalSearch()" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer text-xs">✕</span>
+            </div>
+            <button onclick="applyGlobalFilters()" class="px-3.5 py-2 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-slate-800 transition-colors shadow-2xs cursor-pointer shrink-0">
+              Apply
+            </button>
+            <button onclick="resetAllFilters()" class="px-2.5 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg text-xs font-medium hover:bg-slate-50 transition-colors cursor-pointer shrink-0">
+              Reset
+            </button>
+          </div>
+          <div class="text-[10px] text-slate-400 font-medium">Real-time instant filtering</div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==================== 3. SUMMARY KPI CARDS (6 CARDS) ==================== -->
+    <section class="bg-white rounded-xl border border-slate-200/90 shadow-2xs p-5">
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
+        
+        <!-- Card 1: Today's Delivery -->
+        <div class="bg-blue-50/60 border border-blue-200/80 rounded-xl p-3.5 shadow-2xs transition-all hover:border-blue-300">
+          <div class="text-2xs font-bold text-blue-800 flex items-center justify-between">
+            <span>TODAY'S DELIVERY</span>
+            <i data-lucide="calendar" class="w-3.5 h-3.5 text-blue-600"></i>
+          </div>
+          <div class="text-2xl font-black text-blue-600 mt-1.5" id="kpiToday">48</div>
+          <div class="text-[10px] text-blue-700/80 font-medium mt-0.5">Files Delivered Today</div>
+        </div>
+
+        <!-- Card 2: This Week -->
+        <div class="bg-emerald-50/60 border border-emerald-200/80 rounded-xl p-3.5 shadow-2xs transition-all hover:border-emerald-300">
+          <div class="text-2xs font-bold text-emerald-800 flex items-center justify-between">
+            <span>THIS WEEK</span>
+            <i data-lucide="calendar-range" class="w-3.5 h-3.5 text-emerald-600"></i>
+          </div>
+          <div class="text-2xl font-black text-emerald-600 mt-1.5" id="kpiWeek">286</div>
+          <div class="text-[10px] text-emerald-700/80 font-medium mt-0.5">Files Delivered</div>
+        </div>
+
+        <!-- Card 3: This Month -->
+        <div class="bg-purple-50/60 border border-purple-200/80 rounded-xl p-3.5 shadow-2xs transition-all hover:border-purple-300">
+          <div class="text-2xs font-bold text-purple-800 flex items-center justify-between">
+            <span>THIS MONTH</span>
+            <i data-lucide="calendar" class="w-3.5 h-3.5 text-purple-600"></i>
+          </div>
+          <div class="text-2xl font-black text-purple-600 mt-1.5" id="kpiMonth">1,248</div>
+          <div class="text-[10px] text-purple-700/80 font-medium mt-0.5">Files Delivered</div>
+        </div>
+
+        <!-- Card 4: Total Production -->
+        <div class="bg-slate-900 text-white rounded-xl p-3.5 shadow-2xs transition-all hover:bg-slate-800">
+          <div class="text-2xs font-medium text-slate-300 flex items-center justify-between">
+            <span>TOTAL PRODUCTION</span>
+            <i data-lucide="package" class="w-3.5 h-3.5 text-blue-400"></i>
+          </div>
+          <div class="text-2xl font-black text-white mt-1.5" id="kpiTotal">1,864</div>
+          <div class="text-[10px] text-slate-300 font-medium mt-0.5">Production Items</div>
+        </div>
+
+        <!-- Card 5: Pending Delivery -->
+        <div class="bg-amber-50/60 border border-amber-200/80 rounded-xl p-3.5 shadow-2xs transition-all hover:border-amber-300">
+          <div class="text-2xs font-bold text-amber-800 flex items-center justify-between">
+            <span>PENDING DELIVERY</span>
+            <i data-lucide="clock" class="w-3.5 h-3.5 text-amber-600"></i>
+          </div>
+          <div class="text-2xl font-black text-amber-600 mt-1.5" id="kpiPending">37</div>
+          <div class="text-[10px] text-amber-700/80 font-medium mt-0.5">Awaiting Delivery</div>
+        </div>
+
+        <!-- Card 6: Delivery Success -->
+        <div class="bg-emerald-50/60 border border-emerald-200/80 rounded-xl p-3.5 shadow-2xs transition-all hover:border-emerald-300">
+          <div class="text-2xs font-bold text-emerald-800 flex items-center justify-between">
+            <span>DELIVERY SUCCESS</span>
+            <i data-lucide="check-circle" class="w-3.5 h-3.5 text-emerald-600"></i>
+          </div>
+          <div class="text-2xl font-black text-emerald-700 mt-1.5" id="kpiSuccess">98.4%</div>
+          <div class="text-[10px] text-emerald-700 font-medium mt-0.5">Successful Deliveries</div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==================== 4. ROW 1: 3 PRODUCTION ANALYTICS CHARTS ==================== -->
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+      
+      <!-- 1. Delivery Type Breakdown (Donut Chart) (4 cols) -->
+      <div class="lg:col-span-4 bg-white rounded-xl border border-slate-200/90 shadow-2xs p-4 flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+            <h3 class="text-xs font-bold text-slate-800">DELIVERY TYPE BREAKDOWN</h3>
+            <span class="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">4 Categories</span>
+          </div>
+          <div class="flex items-center justify-between mt-3">
+            <div id="donutChart" class="min-h-[160px] w-1/2 flex items-center justify-center"></div>
+            <div class="w-1/2 space-y-2 text-xs pl-2">
+              <div class="flex items-center justify-between">
+                <span class="flex items-center space-x-1.5">
+                  <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+                  <span class="text-slate-600 font-medium">POD</span>
+                </span>
+                <span class="font-bold text-slate-800" id="legendPod">420 (33.7%)</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="flex items-center space-x-1.5">
+                  <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                  <span class="text-slate-600 font-medium">EPDF</span>
+                </span>
+                <span class="font-bold text-slate-800" id="legendEpdf">356 (28.6%)</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="flex items-center space-x-1.5">
+                  <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                  <span class="text-slate-600 font-medium">SCANNED</span>
+                </span>
+                <span class="font-bold text-slate-800" id="legendScanned">298 (23.9%)</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="flex items-center space-x-1.5">
+                  <span class="w-2.5 h-2.5 rounded-full bg-purple-500"></span>
+                  <span class="text-slate-600 font-medium">E-ISBN</span>
+                </span>
+                <span class="font-bold text-slate-800" id="legendEisbn">174 (13.9%)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Daily / Weekly / Monthly Analytics (Combo Chart) (5 cols) -->
+      <div class="lg:col-span-5 bg-white rounded-xl border border-slate-200/90 shadow-2xs p-4 flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+            <div class="flex items-center space-x-2">
+              <span class="text-xs font-bold text-slate-800" id="analyticsChartHeading">Daily Delivery Count</span>
+            </div>
+            <!-- Day / Week / Month Switcher -->
+            <div class="inline-flex p-0.5 bg-slate-100 rounded-lg border border-slate-200 text-xs font-semibold">
+              <button type="button" onclick="setAnalyticsPeriod('day')" id="tabAnalyticsDay" class="px-2.5 py-0.5 rounded-md text-xs font-bold bg-white text-blue-700 shadow-2xs transition-all cursor-pointer">DAY</button>
+              <button type="button" onclick="setAnalyticsPeriod('week')" id="tabAnalyticsWeek" class="px-2.5 py-0.5 rounded-md text-xs font-medium text-slate-600 hover:text-slate-900 transition-all cursor-pointer">WEEK</button>
+              <button type="button" onclick="setAnalyticsPeriod('month')" id="tabAnalyticsMonth" class="px-2.5 py-0.5 rounded-md text-xs font-medium text-slate-600 hover:text-slate-900 transition-all cursor-pointer">MONTH</button>
+            </div>
+          </div>
+          <div id="stackedAnalyticsChart" class="min-h-[175px] mt-2"></div>
+        </div>
+      </div>
+
+      <!-- 3. Delivery Performance (3 cols) -->
+      <div class="lg:col-span-3 bg-white rounded-xl border border-slate-200/90 shadow-2xs p-4 flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+            <h3 class="text-xs font-bold text-slate-800">DELIVERY PERFORMANCE</h3>
+            <div class="inline-flex p-0.5 bg-slate-100 rounded-lg border border-slate-200 text-[11px] font-semibold">
+              <button type="button" onclick="setPerfPeriod('daily')" id="tabPerfDaily" class="px-2 py-0.5 rounded-md font-bold bg-white text-blue-700 shadow-2xs transition-all cursor-pointer">Day</button>
+              <button type="button" onclick="setPerfPeriod('weekly')" id="tabPerfWeekly" class="px-2 py-0.5 rounded-md font-medium text-slate-600 hover:text-slate-900 transition-all cursor-pointer">Wk</button>
+              <button type="button" onclick="setPerfPeriod('monthly')" id="tabPerfMonthly" class="px-2 py-0.5 rounded-md font-medium text-slate-600 hover:text-slate-900 transition-all cursor-pointer">Mo</button>
+            </div>
+          </div>
+          <div id="performanceBarChart" class="min-h-[175px] mt-2"></div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ==================== 5. ROW 2: TOP CUSTOMERS & RECENT ACTIVITY ==================== -->
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+      
+      <!-- Top Customers by Delivery (4 cols) -->
+      <div class="lg:col-span-4 bg-white rounded-xl border border-slate-200/90 shadow-2xs p-4 flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between pb-2 mb-3 border-b border-slate-100">
+            <h3 class="text-xs font-bold text-slate-800">TOP CUSTOMERS BY DELIVERY</h3>
+            <span class="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">Volume</span>
+          </div>
+          <div class="space-y-3" id="topCustomersList">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Delivery Activity (8 cols) -->
+      <div class="lg:col-span-8 bg-white rounded-xl border border-slate-200/90 shadow-2xs p-4 flex flex-col space-y-2.5">
+        <div class="flex items-center justify-between pb-1 border-b border-slate-100">
+          <div>
+            <h3 class="text-xs font-bold text-slate-800">RECENT DELIVERY ACTIVITY</h3>
+            <p class="text-[10px] text-slate-400">Real-time dispatch log & status queue</p>
+          </div>
+          <a href="#delivery-file-list" class="text-[11px] font-bold text-blue-600 hover:underline">View All</a>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-50/80 text-slate-500 font-semibold border-b border-slate-100 text-[11px]">
+              <tr>
+                <th class="py-2 px-2.5 font-bold whitespace-nowrap">Delivery ID</th>
+                <th class="py-2 px-2.5 font-bold">Customer</th>
+                <th class="py-2 px-2.5 font-bold">File Name</th>
+                <th class="py-2 px-2.5 font-bold text-center">Type</th>
+                <th class="py-2 px-2.5 font-bold text-right">Count</th>
+                <th class="py-2 px-2.5 font-bold whitespace-nowrap">Date & Time</th>
+                <th class="py-2 px-2.5 font-bold whitespace-nowrap">Delivered By</th>
+                <th class="py-2 px-2.5 font-bold text-center">Status</th>
+              </tr>
+            </thead>
+            <tbody id="recentActivityTbody" class="divide-y divide-slate-100">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ==================== 6. ROW 3: FULL DELIVERY FILE LIST ==================== -->
+    <section class="bg-white rounded-xl border border-slate-200/90 shadow-2xs p-4 flex flex-col space-y-3" id="delivery-file-list">
+      
+      <!-- Table Header & Controls Toolbar -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-100">
+        <div>
+          <h3 class="text-xs font-bold text-slate-800">DELIVERY FILE LIST</h3>
+          <p class="text-[10px] text-slate-400">Searchable & filterable customer delivery records</p>
+        </div>
+
+        <!-- Filter Controls on Table -->
+        <div class="flex flex-wrap items-center gap-2">
+          
+          <!-- Table Search -->
+          <div class="relative">
+            <i data-lucide="search" class="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"></i>
+            <input type="text" id="tableSearchInput" oninput="handleTableSearch()" placeholder="Search files..." 
+                   class="text-xs rounded-lg border border-slate-200 pl-8 pr-2 py-1.5 text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-hidden font-medium bg-white hover:border-slate-300 w-44">
+          </div>
+
+          <!-- Type filter select -->
+          <select id="tableFilterType" onchange="filterFileList()" 
+                  class="text-xs rounded-lg border border-slate-200 px-2.5 py-1.5 text-slate-700 bg-white font-medium hover:border-slate-300 outline-hidden cursor-pointer">
+            <option value="all">Type: All</option>
+            <option value="POD">POD</option>
+            <option value="EPDF">EPDF</option>
+            <option value="SCANNED FILE">SCANNED FILE</option>
+            <option value="E-ISBN">E-ISBN</option>
+          </select>
+
+          <!-- Customer filter select -->
+          <select id="tableFilterCustomer" onchange="filterFileList()" 
+                  class="text-xs rounded-lg border border-slate-200 px-2.5 py-1.5 text-slate-700 bg-white font-medium hover:border-slate-300 outline-hidden cursor-pointer">
+            <option value="all">Customer: All</option>
+            <option value="ABC Publishing">ABC Publishing</option>
+            <option value="XYZ Books">XYZ Books</option>
+            <option value="Global Publications">Global Publications</option>
+            <option value="Prime Publishers">Prime Publishers</option>
+            <option value="Sunrise Publications">Sunrise Publications</option>
+            <option value="Knowledge House">Knowledge House</option>
+          </select>
+
+          <!-- Status filter select -->
+          <select id="tableFilterStatus" onchange="filterFileList()" 
+                  class="text-xs rounded-lg border border-slate-200 px-2.5 py-1.5 text-slate-700 bg-white font-medium hover:border-slate-300 outline-hidden cursor-pointer">
+            <option value="all">Status: All</option>
+            <option value="Delivered">Delivered</option>
+            <option value="Pending">Pending</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Failed">Failed</option>
+          </select>
+
+          <!-- Sort filter select -->
+          <select id="tableSortSelect" onchange="sortFileList()" 
+                  class="text-xs rounded-lg border border-slate-200 px-2.5 py-1.5 text-slate-700 bg-white font-medium hover:border-slate-300 outline-hidden cursor-pointer">
+            <option value="latest">Latest Delivery</option>
+            <option value="oldest">Oldest Delivery</option>
+            <option value="qty-desc">Quantity: High to Low</option>
+            <option value="qty-asc">Quantity: Low to High</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Responsive Table Container -->
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-50/80 text-slate-500 font-semibold border-b border-slate-100 text-[11px]">
+            <tr>
+              <th class="py-2.5 px-3 w-8 text-center">
+                <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this)" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer">
+              </th>
+              <th class="py-2.5 px-3 font-bold">File Name</th>
+              <th class="py-2.5 px-3 font-bold">Customer</th>
+              <th class="py-2.5 px-3 font-bold text-center">Type</th>
+              <th class="py-2.5 px-3 font-bold text-right">Quantity</th>
+              <th class="py-2.5 px-3 font-bold whitespace-nowrap">Delivery Date</th>
+              <th class="py-2.5 px-3 font-bold whitespace-nowrap">Delivery Time</th>
+              <th class="py-2.5 px-3 font-bold text-center">Status</th>
+              <th class="py-2.5 px-3 font-bold text-center">Action</th>
+            </tr>
+          </thead>
+          <tbody id="fileListTbody" class="divide-y divide-slate-100">
+            <!-- Rendered dynamically -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination Footer -->
+      <div class="flex items-center justify-between pt-3 border-t border-slate-100 text-[11px] text-slate-500">
+        <div id="fileTableCountLabel">Showing 1 to 5 of 124 entries</div>
+        <div class="flex items-center space-x-1" id="fileTablePagination">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ==================== DELIVERY DETAILS MODAL ==================== -->
+  <div id="deliveryDetailsModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50 hidden" onclick="handleModalBackdropClick(event)">
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-md overflow-hidden" onclick="event.stopPropagation()">
+      <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+        <div class="flex items-center space-x-2">
+          <div class="w-6 h-6 rounded-md bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
+            <i data-lucide="info" class="w-3.5 h-3.5"></i>
+          </div>
+          <h4 class="text-xs font-black uppercase tracking-wider text-slate-800">DELIVERY DETAILS</h4>
+        </div>
+        <button onclick="closeDetailsModal()" class="text-slate-400 hover:text-slate-600 cursor-pointer p-1 rounded-md hover:bg-slate-100">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+      <div class="p-5 space-y-3 text-xs">
+        <div class="flex items-center justify-between py-1 border-b border-slate-100">
+          <span class="text-slate-500 font-medium">Delivery ID:</span>
+          <span class="font-bold text-slate-900" id="modalDeliveryId">DEL-1028</span>
+        </div>
+        <div class="flex items-center justify-between py-1 border-b border-slate-100">
+          <span class="text-slate-500 font-medium">Customer:</span>
+          <span class="font-bold text-slate-900" id="modalCustomer">ABC Publishing</span>
+        </div>
+        <div class="flex items-center justify-between py-1 border-b border-slate-100">
+          <span class="text-slate-500 font-medium">File:</span>
+          <span class="font-mono text-slate-800 font-semibold" id="modalFile">ABC_Title_01.pdf</span>
+        </div>
+        <div class="flex items-center justify-between py-1 border-b border-slate-100">
+          <span class="text-slate-500 font-medium">Production Type:</span>
+          <span class="font-bold text-blue-700" id="modalType">POD</span>
+        </div>
+        <div class="flex items-center justify-between py-1 border-b border-slate-100">
+          <span class="text-slate-500 font-medium">Quantity:</span>
+          <span class="font-black text-slate-900" id="modalQty">24</span>
+        </div>
+        <div class="flex items-center justify-between py-1 border-b border-slate-100">
+          <span class="text-slate-500 font-medium">Delivery Date:</span>
+          <span class="font-semibold text-slate-800" id="modalDate">07 Sep 2026</span>
+        </div>
+        <div class="flex items-center justify-between py-1 border-b border-slate-100">
+          <span class="text-slate-500 font-medium">Delivery Time:</span>
+          <span class="font-semibold text-slate-800" id="modalTime">12:42 PM</span>
+        </div>
+        <div class="flex items-center justify-between py-1 border-b border-slate-100">
+          <span class="text-slate-500 font-medium">Delivered By:</span>
+          <span class="font-semibold text-slate-800" id="modalDeliveredBy">Production Team</span>
+        </div>
+        <div class="flex items-center justify-between py-1">
+          <span class="text-slate-500 font-medium">Status:</span>
+          <span id="modalStatusBadge" class="inline-flex items-center px-2 py-0.5 rounded-full text-2xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+            Delivered
+          </span>
+        </div>
+      </div>
+      <div class="px-5 py-3 bg-slate-50 border-t border-slate-100 flex justify-end space-x-2">
+        <button onclick="closeDetailsModal()" class="px-4 py-1.5 bg-white border border-slate-200 text-slate-700 rounded-lg text-xs font-semibold hover:bg-slate-50 transition-colors cursor-pointer shadow-2xs">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+  <!-- ==================== SCRIPT APPLICATION LOGIC ==================== -->
+  <script>
+    /* ==========================================================
+       DEMO DATA STORE
+       ========================================================== */
+    const rawDeliveryData = [
+      { id: "DEL-1028", customer: "ABC Publishing", file: "ABC_Title_01.pdf", type: "POD", qty: 24, date: "07 Sep 2026", time: "12:42 PM", deliveredBy: "Production Team", status: "Delivered", timestamp: 1788768120000 },
+      { id: "DEL-1027", customer: "XYZ Books", file: "XYZ_Book_EPUB.pdf", type: "EPDF", qty: 18, date: "07 Sep 2026", time: "11:58 AM", deliveredBy: "Production Team", status: "Delivered", timestamp: 1788765480000 },
+      { id: "DEL-1026", customer: "Global Publications", file: "Scan_Project_42.zip", type: "SCANNED FILE", qty: 35, date: "07 Sep 2026", time: "11:20 AM", deliveredBy: "Production Team", status: "Delivered", timestamp: 1788763200000 },
+      { id: "DEL-1025", customer: "Prime Publishers", file: "ISBN_Batch_18.xlsx", type: "E-ISBN", qty: 12, date: "07 Sep 2026", time: "10:45 AM", deliveredBy: "Production Team", status: "Delivered", timestamp: 1788761100000 },
+      { id: "DEL-1024", customer: "ABC Publishing", file: "ABC_Title_02.pdf", type: "POD", qty: 19, date: "06 Sep 2026", time: "05:32 PM", deliveredBy: "Production Team", status: "Delivered", timestamp: 1788701520000 },
+      { id: "DEL-1023", customer: "XYZ Books", file: "XYZ_EPDF_2026_09.pdf", type: "EPDF", qty: 18, date: "07 Sep 2026", time: "11:58 AM", deliveredBy: "Production Team", status: "Delivered", timestamp: 1788765480000 },
+      { id: "DEL-1022", customer: "Sunrise Publications", file: "DEF_Book_POD.pdf", type: "POD", qty: 17, date: "06 Sep 2026", time: "04:36 PM", deliveredBy: "Production Team", status: "Delivered", timestamp: 1788698160000 },
+      { id: "DEL-1021", customer: "Knowledge House", file: "KH_Curriculum_Vol1.pdf", type: "POD", qty: 30, date: "06 Sep 2026", time: "02:15 PM", deliveredBy: "Production Team", status: "Delivered", timestamp: 1788689700000 },
+      { id: "DEL-1020", customer: "Prime Publishers", file: "Prime_Catalog_2026.pdf", type: "EPDF", qty: 22, date: "06 Sep 2026", time: "01:20 PM", deliveredBy: "Production Team", status: "Delivered", timestamp: 1788686400000 },
+      { id: "DEL-1019", customer: "Global Publications", file: "Archive_Batch_09.zip", type: "SCANNED FILE", qty: 45, date: "05 Sep 2026", time: "04:10 PM", deliveredBy: "Production Team", status: "Delivered", timestamp: 1788610200000 },
+      { id: "DEL-1018", customer: "ABC Publishing", file: "ABC_Fiction_Release.pdf", type: "POD", qty: 28, date: "05 Sep 2026", time: "11:30 AM", deliveredBy: "Production Team", status: "Delivered", timestamp: 1788593400000 },
+      { id: "DEL-1017", customer: "Knowledge House", file: "ISBN_Registration_Q3.xlsx", type: "E-ISBN", qty: 14, date: "05 Sep 2026", time: "09:40 AM", deliveredBy: "Production Team", status: "Delivered", timestamp: 1788586800000 },
+      { id: "DEL-1016", customer: "XYZ Books", file: "XYZ_Anthology_Final.epub", type: "EPDF", qty: 25, date: "04 Sep 2026", time: "03:50 PM", deliveredBy: "Production Team", status: "Delivered", timestamp: 1788522600000 },
+      { id: "DEL-1015", customer: "Sunrise Publications", file: "Historic_Scan_Vol4.zip", type: "SCANNED FILE", qty: 38, date: "04 Sep 2026", time: "01:15 PM", deliveredBy: "Production Team", status: "Delivered", timestamp: 1788513300000 },
+      { id: "DEL-1014", customer: "Prime Publishers", file: "Prime_POD_SpecialEdition.pdf", type: "POD", qty: 20, date: "03 Sep 2026", time: "04:20 PM", deliveredBy: "Production Team", status: "Pending", timestamp: 1788438000000 }
+    ];
+
+    // Analytics dataset matching user specification
+    const analyticsData = {
+      day: {
+        labels: ["Sep 1", "Sep 2", "Sep 3", "Sep 4", "Sep 5", "Sep 6", "Sep 7"],
+        pod: [18, 21, 16, 24, 19, 22, 20],
+        epdf: [12, 15, 13, 18, 14, 16, 17],
+        scanned: [8, 9, 11, 12, 10, 8, 11],
+        eisbn: [5, 6, 4, 7, 5, 6, 5],
+        total: [43, 51, 44, 61, 48, 52, 53]
+      },
+      week: {
+        labels: ["Week 1", "Week 2", "Week 3", "Week 4"],
+        pod: [112, 126, 118, 132],
+        epdf: [86, 92, 97, 101],
+        scanned: [64, 71, 76, 79],
+        eisbn: [38, 42, 45, 47],
+        total: [300, 331, 336, 359]
+      },
+      month: {
+        labels: ["May", "Jun", "Jul", "Aug", "Sep"],
+        pod: [384, 421, 398, 452, 420],
+        epdf: [291, 318, 337, 361, 356],
+        scanned: [246, 271, 286, 304, 298],
+        eisbn: [138, 152, 161, 179, 174],
+        total: [1059, 1162, 1182, 1296, 1248]
+      }
+    };
+
+    // Performance comparison data matching ApexCharts format
+    const performanceData = {
+      daily: {
+        categories: ["POD", "EPDF", "SCANNED FILE", "E-ISBN"],
+        delivered: [142, 118, 98, 76],
+        target: [96, 88, 82, 58],
+        prior: [78, 84, 58, 46]
+      },
+      weekly: {
+        categories: ["POD", "EPDF", "SCANNED FILE", "E-ISBN"],
+        delivered: [488, 396, 298, 174],
+        target: [420, 360, 270, 160],
+        prior: [380, 340, 240, 140]
+      },
+      monthly: {
+        categories: ["POD", "EPDF", "SCANNED FILE", "E-ISBN"],
+        delivered: [1864, 1435, 1105, 652],
+        target: [1700, 1350, 1050, 600],
+        prior: [1550, 1280, 980, 560]
+      }
+    };
+
+    // Top customers ranking
+    const topCustomers = [
+      { name: "ABC Publishing", count: 286, max: 350, color: "bg-blue-500", text: "text-blue-700" },
+      { name: "XYZ Books", count: 241, max: 350, color: "bg-sky-500", text: "text-sky-700" },
+      { name: "Global Publications", count: 198, max: 350, color: "bg-emerald-500", text: "text-emerald-700" },
+      { name: "Prime Publishers", count: 176, max: 350, color: "bg-purple-500", text: "text-purple-700" },
+      { name: "Sunrise Publications", count: 143, max: 350, color: "bg-amber-500", text: "text-amber-700" }
+    ];
+
+    let currentAnalyticsPeriod = 'day';
+    let currentPerfPeriod = 'daily';
+    let currentPage = 1;
+    const pageSize = 5;
+
+    // ApexCharts instances
+    let donutChart = null;
+    let analyticsChart = null;
+    let performanceChart = null;
+
+    /* ==========================================================
+       INITIALIZATION
+       ========================================================== */
+    document.addEventListener("DOMContentLoaded", () => {
+      initDonutChart();
+      initAnalyticsChart();
+      initPerformanceChart();
+      renderTopCustomers();
+      renderRecentActivity();
+      renderFileListTable();
+      lucide.createIcons();
+
+      // Close export dropdown when clicking outside
+      document.addEventListener("click", (e) => {
+        const dropdown = document.getElementById("exportMenu");
+        const exportBtn = document.getElementById("exportContainer");
+        if (dropdown && !exportBtn.contains(e.target)) {
+          dropdown.classList.add("hidden");
+        }
+      });
+
+      // Escape key to close modal
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") closeDetailsModal();
+      });
+    });
+
+    /* ==========================================================
+       1. APEXCHARTS: DONUT CHART
+       ========================================================== */
+    function initDonutChart(dataCounts = [420, 356, 298, 174]) {
+      const total = dataCounts.reduce((a, b) => a + b, 0);
+
+      const options = {
+        chart: {
+          type: 'donut',
+          height: 160,
+          sparkline: { enabled: true }
+        },
+        series: dataCounts,
+        labels: ['POD', 'EPDF', 'SCANNED FILE', 'E-ISBN'],
+        colors: ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'],
+        stroke: { width: 2, colors: ['#ffffff'] },
+        plotOptions: {
+          pie: {
+            donut: {
+              size: '72%',
+              labels: {
+                show: true,
+                total: {
+                  show: true,
+                  label: 'Total',
+                  fontSize: '10px',
+                  fontWeight: 600,
+                  color: '#64748b',
+                  formatter: () => total.toLocaleString()
+                },
+                value: {
+                  fontSize: '15px',
+                  fontWeight: 800,
+                  color: '#0f172a',
+                  offsetY: -2
+                }
+              }
+            }
+          }
+        },
+        tooltip: {
+          y: {
+            formatter: (val) => `${val.toLocaleString()} (${((val / total) * 100).toFixed(1)}%)`
+          }
+        }
+      };
+
+      if (donutChart) donutChart.destroy();
+      donutChart = new ApexCharts(document.querySelector("#donutChart"), options);
+      donutChart.render();
+
+      // Update legends
+      document.getElementById('legendPod').textContent = `${dataCounts[0]} (${((dataCounts[0]/total)*100).toFixed(1)}%)`;
+      document.getElementById('legendEpdf').textContent = `${dataCounts[1]} (${((dataCounts[1]/total)*100).toFixed(1)}%)`;
+      document.getElementById('legendScanned').textContent = `${dataCounts[2]} (${((dataCounts[2]/total)*100).toFixed(1)}%)`;
+      document.getElementById('legendEisbn').textContent = `${dataCounts[3]} (${((dataCounts[3]/total)*100).toFixed(1)}%)`;
+    }
+
+    /* ==========================================================
+       2. APEXCHARTS: STACKED BAR + LINE TOTAL COMBO CHART
+       ========================================================== */
+    function initAnalyticsChart() {
+      const dataset = analyticsData[currentAnalyticsPeriod];
+
+      const options = {
+        chart: {
+          height: 180,
+          type: 'line',
+          stacked: true,
+          toolbar: { show: false },
+          fontFamily: 'Inter, sans-serif'
+        },
+        stroke: {
+          width: [0, 0, 0, 0, 2.5],
+          curve: 'smooth'
+        },
+        plotOptions: {
+          bar: {
+            columnWidth: '45%',
+            borderRadius: 2
+          }
+        },
+        colors: ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#1e293b'],
+        series: [
+          { name: 'POD', type: 'column', data: dataset.pod },
+          { name: 'EPDF', type: 'column', data: dataset.epdf },
+          { name: 'Scanned', type: 'column', data: dataset.scanned },
+          { name: 'E-ISBN', type: 'column', data: dataset.eisbn },
+          { name: 'Total', type: 'line', data: dataset.total }
+        ],
+        xaxis: {
+          categories: dataset.labels,
+          labels: { style: { fontSize: '11px', colors: '#64748b' } },
+          axisBorder: { show: false },
+          axisTicks: { show: false }
+        },
+        yaxis: {
+          labels: { style: { fontSize: '10px', colors: '#94a3b8' } }
+        },
+        grid: {
+          borderColor: '#f1f5f9',
+          strokeDashArray: 3
+        },
+        legend: {
+          position: 'top',
+          horizontalAlign: 'right',
+          fontSize: '10.5px',
+          markers: { radius: 12 }
+        },
+        tooltip: {
+          shared: true,
+          intersect: false
+        }
+      };
+
+      if (analyticsChart) analyticsChart.destroy();
+      analyticsChart = new ApexCharts(document.querySelector("#stackedAnalyticsChart"), options);
+      analyticsChart.render();
+    }
+
+    function setAnalyticsPeriod(period) {
+      currentAnalyticsPeriod = period;
+      
+      const tabDay = document.getElementById("tabAnalyticsDay");
+      const tabWeek = document.getElementById("tabAnalyticsWeek");
+      const tabMonth = document.getElementById("tabAnalyticsMonth");
+
+      [tabDay, tabWeek, tabMonth].forEach(tab => {
+        tab.className = "px-2.5 py-0.5 rounded-md text-xs font-medium text-slate-600 hover:text-slate-900 transition-all cursor-pointer";
+      });
+
+      if (period === 'day') {
+        tabDay.className = "px-2.5 py-0.5 rounded-md text-xs font-bold bg-white text-blue-700 shadow-2xs transition-all cursor-pointer";
+        document.getElementById("analyticsChartHeading").textContent = "Daily Delivery Count";
+      } else if (period === 'week') {
+        tabWeek.className = "px-2.5 py-0.5 rounded-md text-xs font-bold bg-white text-blue-700 shadow-2xs transition-all cursor-pointer";
+        document.getElementById("analyticsChartHeading").textContent = "Weekly Delivery Count";
+      } else {
+        tabMonth.className = "px-2.5 py-0.5 rounded-md text-xs font-bold bg-white text-blue-700 shadow-2xs transition-all cursor-pointer";
+        document.getElementById("analyticsChartHeading").textContent = "Monthly Delivery Count";
+      }
+
+      initAnalyticsChart();
+    }
+
+    /* ==========================================================
+       3. APEXCHARTS: DELIVERY PERFORMANCE GROUPED COLUMN CHART
+       ========================================================== */
+    function initPerformanceChart() {
+      const dataset = performanceData[currentPerfPeriod];
+
+      const options = {
+        chart: {
+          type: 'bar',
+          height: 180,
+          toolbar: { show: false },
+          fontFamily: 'Inter, sans-serif'
+        },
+        plotOptions: {
+          bar: {
+            horizontal: false,
+            columnWidth: '55%',
+            borderRadius: 3
+          }
+        },
+        colors: ['#2563eb', '#0ea5e9', '#f59e0b'],
+        dataLabels: { enabled: false },
+        stroke: { show: true, width: 1, colors: ['transparent'] },
+        series: [
+          { name: 'Delivered', data: dataset.delivered },
+          { name: 'Target', data: dataset.target },
+          { name: 'Prior', data: dataset.prior }
+        ],
+        xaxis: {
+          categories: dataset.categories,
+          labels: { style: { fontSize: '10px', colors: '#64748b' } }
+        },
+        yaxis: {
+          labels: { style: { fontSize: '10px', colors: '#94a3b8' } }
+        },
+        grid: {
+          borderColor: '#f1f5f9',
+          strokeDashArray: 3
+        },
+        legend: {
+          position: 'top',
+          horizontalAlign: 'right',
+          fontSize: '10px'
+        },
+        tooltip: {
+          y: { formatter: (val) => `${val.toLocaleString()} files` }
+        }
+      };
+
+      if (performanceChart) performanceChart.destroy();
+      performanceChart = new ApexCharts(document.querySelector("#performanceBarChart"), options);
+      performanceChart.render();
+    }
+
+    function setPerfPeriod(period) {
+      currentPerfPeriod = period;
+      
+      const tabDay = document.getElementById("tabPerfDaily");
+      const tabWeek = document.getElementById("tabPerfWeekly");
+      const tabMonth = document.getElementById("tabPerfMonthly");
+
+      [tabDay, tabWeek, tabMonth].forEach(tab => {
+        tab.className = "px-2 py-0.5 rounded-md font-medium text-slate-600 hover:text-slate-900 transition-all cursor-pointer";
+      });
+
+      if (period === 'daily') {
+        tabDay.className = "px-2 py-0.5 rounded-md font-bold bg-white text-blue-700 shadow-2xs transition-all cursor-pointer";
+      } else if (period === 'weekly') {
+        tabWeek.className = "px-2 py-0.5 rounded-md font-bold bg-white text-blue-700 shadow-2xs transition-all cursor-pointer";
+      } else {
+        tabMonth.className = "px-2 py-0.5 rounded-md font-bold bg-white text-blue-700 shadow-2xs transition-all cursor-pointer";
+      }
+
+      initPerformanceChart();
+    }
+
+    /* ==========================================================
+       4. TOP CUSTOMERS RANKING LIST
+       ========================================================== */
+    function renderTopCustomers() {
+      const container = document.getElementById('topCustomersList');
+      container.innerHTML = '';
+
+      topCustomers.forEach((cust, idx) => {
+        const pct = Math.round((cust.count / cust.max) * 100);
+        const div = document.createElement('div');
+        div.className = "space-y-1";
+        div.innerHTML = `
+          <div class="flex items-center justify-between text-xs">
+            <div class="flex items-center space-x-2 font-semibold text-slate-800">
+              <span class="text-slate-400 font-bold text-[11px]">${idx + 1}.</span>
+              <span>${cust.name}</span>
+            </div>
+            <span class="font-bold ${cust.text}">${cust.count}</span>
+          </div>
+          <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+            <div class="${cust.color} h-full rounded-full transition-all duration-300" style="width: ${pct}%"></div>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    /* ==========================================================
+       5. RECENT ACTIVITY TABLE
+       ========================================================== */
+    function renderRecentActivity() {
+      const tbody = document.getElementById('recentActivityTbody');
+      tbody.innerHTML = '';
+
+      const items = rawDeliveryData.slice(0, 5);
+      items.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50/70 transition-colors cursor-pointer";
+        tr.onclick = () => openDetailsModal(item.id);
+        tr.innerHTML = `
+          <td class="py-2.5 px-2.5 font-bold text-slate-900 whitespace-nowrap">${item.id}</td>
+          <td class="py-2.5 px-2.5 font-medium text-slate-700">${item.customer}</td>
+          <td class="py-2.5 px-2.5 font-mono text-[11px] text-slate-600">${item.file}</td>
+          <td class="py-2.5 px-2.5 text-center">
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${getTypeBadgeClass(item.type)}">${item.type}</span>
+          </td>
+          <td class="py-2.5 px-2.5 font-black text-slate-800 text-right">${item.qty}</td>
+          <td class="py-2.5 px-2.5 text-slate-600 whitespace-nowrap text-[11px]">
+            ${item.date} <span class="text-slate-400 font-normal ml-1">${item.time}</span>
+          </td>
+          <td class="py-2.5 px-2.5 text-slate-500 whitespace-nowrap">${item.deliveredBy}</td>
+          <td class="py-2.5 px-2.5 text-center">
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              ${item.status}
+            </span>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function getTypeBadgeClass(type) {
+      if (type === 'POD') return 'bg-blue-50 text-blue-700 border border-blue-200';
+      if (type === 'EPDF') return 'bg-emerald-50 text-emerald-700 border border-emerald-200';
+      if (type === 'SCANNED FILE') return 'bg-amber-50 text-amber-700 border border-amber-200';
+      return 'bg-purple-50 text-purple-700 border border-purple-200';
+    }
+
+    /* ==========================================================
+       6. DELIVERY FILE LIST TABLE (SEARCH, FILTER & PAGINATION)
+       ========================================================== */
+    function getFilteredData() {
+      const typeFilter = document.getElementById('tableFilterType').value;
+      const customerFilter = document.getElementById('tableFilterCustomer').value;
+      const statusFilter = document.getElementById('tableFilterStatus').value;
+      const searchVal = document.getElementById('tableSearchInput').value.toLowerCase().trim();
+      const globalSearchVal = document.getElementById('globalSearchInput').value.toLowerCase().trim();
+      const effectiveSearch = searchVal || globalSearchVal;
+
+      return rawDeliveryData.filter(item => {
+        const matchesType = typeFilter === 'all' || item.type === typeFilter;
+        const matchesCustomer = customerFilter === 'all' || item.customer === customerFilter;
+        const matchesStatus = statusFilter === 'all' || item.status.toLowerCase() === statusFilter.toLowerCase();
+        const matchesSearch = !effectiveSearch || 
+          item.file.toLowerCase().includes(effectiveSearch) ||
+          item.customer.toLowerCase().includes(effectiveSearch) ||
+          item.id.toLowerCase().includes(effectiveSearch);
+
+        return matchesType && matchesCustomer && matchesStatus && matchesSearch;
+      });
+    }
+
+    function renderFileListTable() {
+      const tbody = document.getElementById('fileListTbody');
+      tbody.innerHTML = '';
+
+      const filtered = getFilteredData();
+      const totalCount = filtered.length;
+
+      const startIndex = (currentPage - 1) * pageSize;
+      const pageItems = filtered.slice(startIndex, startIndex + pageSize);
+
+      if (pageItems.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="9" class="text-center py-6 text-slate-400">No matching delivery files found.</td></tr>`;
+      } else {
+        pageItems.forEach(item => {
+          const tr = document.createElement('tr');
+          tr.className = "hover:bg-slate-50/70 transition-colors";
+          tr.innerHTML = `
+            <td class="py-2.5 px-3 text-center" onclick="event.stopPropagation()">
+              <input type="checkbox" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer row-checkbox">
+            </td>
+            <td class="py-2.5 px-3 font-semibold text-slate-900">${item.file}</td>
+            <td class="py-2.5 px-3 font-medium text-slate-700">${item.customer}</td>
+            <td class="py-2.5 px-3 text-center">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold ${getTypeBadgeClass(item.type)}">${item.type}</span>
+            </td>
+            <td class="py-2.5 px-3 font-black text-slate-800 text-right">${item.qty}</td>
+            <td class="py-2.5 px-3 text-slate-600 whitespace-nowrap text-[11px]">${item.date}</td>
+            <td class="py-2.5 px-3 text-slate-600 whitespace-nowrap text-[11px]">${item.time}</td>
+            <td class="py-2.5 px-3 text-center">
+              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${item.status === 'Delivered' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}">
+                ${item.status}
+              </span>
+            </td>
+            <td class="py-2.5 px-3 text-center" onclick="event.stopPropagation()">
+              <div class="inline-flex items-center space-x-1">
+                <button onclick="openDetailsModal('${item.id}')" class="px-2 py-1 bg-white border border-slate-200 hover:border-slate-300 rounded text-slate-600 hover:text-blue-600 text-2xs font-semibold shadow-2xs flex items-center space-x-1 cursor-pointer" title="View details">
+                  <i data-lucide="eye" class="w-3 h-3"></i>
+                  <span>View</span>
+                </button>
+                <button onclick="downloadFileDemo('${item.file}')" class="px-2 py-1 bg-white border border-slate-200 hover:border-slate-300 rounded text-slate-600 hover:text-blue-600 text-2xs font-semibold shadow-2xs flex items-center space-x-1 cursor-pointer" title="Download">
+                  <i data-lucide="download" class="w-3 h-3"></i>
+                  <span>Download</span>
+                </button>
+                <button onclick="openDetailsModal('${item.id}')" class="px-2 py-1 bg-white border border-slate-200 hover:border-slate-300 rounded text-slate-600 hover:text-blue-600 text-2xs font-semibold shadow-2xs flex items-center space-x-1 cursor-pointer" title="Details">
+                  <i data-lucide="file-text" class="w-3 h-3"></i>
+                  <span>Details</span>
+                </button>
+              </div>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+
+      // Update count & pagination
+      const endShowing = Math.min(startIndex + pageSize, totalCount);
+      document.getElementById('fileTableCountLabel').textContent = totalCount === 0 
+        ? 'Showing 0 entries' 
+        : `Showing ${startIndex + 1} to ${endShowing} of ${totalCount > 100 ? totalCount : '124'} entries`;
+
+      renderPaginationControls();
+      lucide.createIcons();
+    }
+
+    function renderPaginationControls() {
+      const container = document.getElementById('fileTablePagination');
+      container.innerHTML = `
+        <button onclick="changePage(-1)" class="p-1.5 rounded border border-slate-200 hover:bg-slate-50 text-slate-600 hover:text-blue-600 cursor-pointer">
+          <i data-lucide="chevron-left" class="w-3 h-3"></i>
+        </button>
+        <button onclick="setPage(1)" class="px-2.5 py-1 rounded text-2xs font-bold ${currentPage === 1 ? 'bg-blue-600 text-white' : 'border border-slate-200 hover:bg-slate-50 text-slate-600'} cursor-pointer">1</button>
+        <button onclick="setPage(2)" class="px-2.5 py-1 rounded text-2xs font-bold ${currentPage === 2 ? 'bg-blue-600 text-white' : 'border border-slate-200 hover:bg-slate-50 text-slate-600'} cursor-pointer">2</button>
+        <button onclick="setPage(3)" class="px-2.5 py-1 rounded text-2xs font-bold ${currentPage === 3 ? 'bg-blue-600 text-white' : 'border border-slate-200 hover:bg-slate-50 text-slate-600'} cursor-pointer">3</button>
+        <button onclick="setPage(4)" class="px-2.5 py-1 rounded text-2xs font-bold ${currentPage === 4 ? 'bg-blue-600 text-white' : 'border border-slate-200 hover:bg-slate-50 text-slate-600'} cursor-pointer">4</button>
+        <button onclick="setPage(5)" class="px-2.5 py-1 rounded text-2xs font-bold ${currentPage === 5 ? 'bg-blue-600 text-white' : 'border border-slate-200 hover:bg-slate-50 text-slate-600'} cursor-pointer">5</button>
+        <span class="px-1 text-slate-400">..</span>
+        <button onclick="setPage(25)" class="px-2.5 py-1 rounded text-2xs font-bold ${currentPage === 25 ? 'bg-blue-600 text-white' : 'border border-slate-200 hover:bg-slate-50 text-slate-600'} cursor-pointer">25</button>
+        <button onclick="changePage(1)" class="p-1.5 rounded border border-slate-200 hover:bg-slate-50 text-slate-600 hover:text-blue-600 cursor-pointer">
+          <i data-lucide="chevron-right" class="w-3 h-3"></i>
+        </button>
+      `;
+    }
+
+    function handleTableSearch() {
+      currentPage = 1;
+      renderFileListTable();
+    }
+
+    function filterFileList() {
+      currentPage = 1;
+      renderFileListTable();
+    }
+
+    function sortFileList() {
+      const sortVal = document.getElementById('tableSortSelect').value;
+      if (sortVal === 'latest') {
+        rawDeliveryData.sort((a, b) => b.timestamp - a.timestamp);
+      } else if (sortVal === 'oldest') {
+        rawDeliveryData.sort((a, b) => a.timestamp - b.timestamp);
+      } else if (sortVal === 'qty-desc') {
+        rawDeliveryData.sort((a, b) => b.qty - a.qty);
+      } else if (sortVal === 'qty-asc') {
+        rawDeliveryData.sort((a, b) => a.qty - b.qty);
+      }
+      renderFileListTable();
+    }
+
+    function changePage(delta) {
+      const maxPage = 5;
+      const target = currentPage + delta;
+      if (target >= 1 && target <= maxPage) {
+        setPage(target);
+      }
+    }
+
+    function setPage(pageNum) {
+      currentPage = pageNum;
+      renderFileListTable();
+    }
+
+    function toggleSelectAll(masterCheckbox) {
+      const checkboxes = document.querySelectorAll('.row-checkbox');
+      checkboxes.forEach(cb => cb.checked = masterCheckbox.checked);
+    }
+
+    /* ==========================================================
+       7. GLOBAL FILTERS INTERACTION
+       ========================================================== */
+    function applyGlobalFilters() {
+      const dateRange = document.getElementById('filterDateRange').value;
+      const prodType = document.getElementById('filterProdType').value;
+      const customer = document.getElementById('filterCustomer').value;
+      const searchQuery = document.getElementById('globalSearchInput').value;
+
+      // Sync with table controls
+      if (prodType !== 'all') {
+        document.getElementById('tableFilterType').value = prodType;
+      }
+      if (customer !== 'all') {
+        document.getElementById('tableFilterCustomer').value = customer;
+      }
+      if (searchQuery) {
+        document.getElementById('tableSearchInput').value = searchQuery;
+      }
+
+      // Dynamic recalculations for summary cards based on prodType
+      let factor = 1.0;
+      let podC = 420, epdfC = 356, scannedC = 298, eisbnC = 174;
+
+      if (prodType === 'POD') {
+        factor = 0.337;
+        podC = 420; epdfC = 0; scannedC = 0; eisbnC = 0;
+      } else if (prodType === 'EPDF') {
+        factor = 0.286;
+        podC = 0; epdfC = 356; scannedC = 0; eisbnC = 0;
+      } else if (prodType === 'SCANNED FILE') {
+        factor = 0.239;
+        podC = 0; epdfC = 0; scannedC = 298; eisbnC = 0;
+      } else if (prodType === 'E-ISBN') {
+        factor = 0.139;
+        podC = 0; epdfC = 0; scannedC = 0; eisbnC = 174;
+      }
+
+      const todayVal = Math.round(48 * factor);
+      const weekVal = Math.round(286 * factor);
+      const monthVal = Math.round(1248 * factor);
+      const totalVal = Math.round(1864 * factor);
+
+      document.getElementById('kpiToday').textContent = todayVal;
+      document.getElementById('kpiWeek').textContent = weekVal;
+      document.getElementById('kpiMonth').textContent = monthVal.toLocaleString();
+      document.getElementById('kpiTotal').textContent = totalVal.toLocaleString();
+
+      document.getElementById('activeFilterBadge').textContent = `${prodType === 'all' ? 'All Types' : prodType} • ${customer === 'all' ? 'All Customers' : customer}`;
+
+      initDonutChart([podC, epdfC, scannedC, eisbnC]);
+      renderFileListTable();
+      showToast(`Filter applied: ${prodType} | ${customer}`);
+    }
+
+    function quickFilterDate(scope) {
+      document.getElementById('filterDateRange').value = scope;
+      
+      const btnToday = document.getElementById('quickToday');
+      const btnWeek = document.getElementById('quickWeek');
+      const btnMonth = document.getElementById('quickMonth');
+
+      [btnToday, btnWeek, btnMonth].forEach(b => {
+        b.className = "px-2.5 py-1 rounded-md text-xs font-medium text-slate-600 hover:text-slate-900 transition-all cursor-pointer";
+      });
+
+      if (scope === 'today') {
+        btnToday.className = "px-2.5 py-1 rounded-md text-xs font-bold bg-white text-blue-700 shadow-2xs transition-all cursor-pointer";
+        document.getElementById('filterDateHint').textContent = "Period: Today (07 Sep 2026)";
+      } else if (scope === 'week') {
+        btnWeek.className = "px-2.5 py-1 rounded-md text-xs font-bold bg-white text-blue-700 shadow-2xs transition-all cursor-pointer";
+        document.getElementById('filterDateHint').textContent = "Period: 01 Sep 2026 - 07 Sep 2026";
+      } else {
+        btnMonth.className = "px-2.5 py-1 rounded-md text-xs font-bold bg-white text-blue-700 shadow-2xs transition-all cursor-pointer";
+        document.getElementById('filterDateHint').textContent = "Period: Month of September 2026";
+      }
+
+      applyGlobalFilters();
+    }
+
+    function resetTypeFilter() {
+      document.getElementById('filterProdType').value = 'all';
+      applyGlobalFilters();
+    }
+
+    function resetCustomerFilter() {
+      document.getElementById('filterCustomer').value = 'all';
+      applyGlobalFilters();
+    }
+
+    function clearGlobalSearch() {
+      document.getElementById('globalSearchInput').value = '';
+      document.getElementById('tableSearchInput').value = '';
+      applyGlobalFilters();
+    }
+
+    function resetAllFilters() {
+      document.getElementById('filterDateRange').value = 'week';
+      document.getElementById('filterProdType').value = 'all';
+      document.getElementById('filterCustomer').value = 'all';
+      document.getElementById('globalSearchInput').value = '';
+      document.getElementById('tableSearchInput').value = '';
+      document.getElementById('tableFilterType').value = 'all';
+      document.getElementById('tableFilterCustomer').value = 'all';
+      document.getElementById('tableFilterStatus').value = 'all';
+      quickFilterDate('week');
+      showToast("Filters reset to default view.");
+    }
+
+    function navigateDateRange(delta) {
+      showToast(delta < 0 ? "Navigated to previous period" : "Navigated to next period");
+    }
+
+    /* ==========================================================
+       8. MODAL: DELIVERY DETAILS
+       ========================================================== */
+    function openDetailsModal(deliveryId) {
+      const item = rawDeliveryData.find(d => d.id === deliveryId) || rawDeliveryData[0];
+
+      document.getElementById('modalDeliveryId').textContent = item.id;
+      document.getElementById('modalCustomer').textContent = item.customer;
+      document.getElementById('modalFile').textContent = item.file;
+      document.getElementById('modalType').textContent = item.type;
+      document.getElementById('modalQty').textContent = item.qty;
+      document.getElementById('modalDate').textContent = item.date;
+      document.getElementById('modalTime').textContent = item.time;
+      document.getElementById('modalDeliveredBy').textContent = item.deliveredBy;
+
+      const badge = document.getElementById('modalStatusBadge');
+      badge.textContent = item.status;
+      badge.className = `inline-flex items-center px-2 py-0.5 rounded-full text-2xs font-bold ${item.status === 'Delivered' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`;
+
+      document.getElementById('deliveryDetailsModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeDetailsModal() {
+      document.getElementById('deliveryDetailsModal').classList.add('hidden');
+    }
+
+    function handleModalBackdropClick(event) {
+      if (event.target.id === 'deliveryDetailsModal') {
+        closeDetailsModal();
+      }
+    }
+
+    /* ==========================================================
+       9. EXPORT & REFRESH UTILITIES
+       ========================================================== */
+    function toggleExportMenu(e) {
+      e.stopPropagation();
+      const menu = document.getElementById('exportMenu');
+      menu.classList.toggle('hidden');
+    }
+
+    function triggerExport(format) {
+      document.getElementById('exportMenu').classList.add('hidden');
+
+      if (format === 'csv') {
+        exportToCsv();
+      } else {
+        showToast(`Preparing ${format.toUpperCase()} export download...`);
+        setTimeout(() => {
+          showToast(`Exported ${format.toUpperCase()} successfully!`);
+        }, 700);
+      }
+    }
+
+    function exportToCsv() {
+      const headers = ["Delivery ID", "Customer", "File Name", "Type", "Quantity", "Delivery Date", "Delivery Time", "Delivered By", "Status"];
+      const rows = rawDeliveryData.map(d => [
+        `"${d.id}"`,
+        `"${d.customer}"`,
+        `"${d.file}"`,
+        `"${d.type}"`,
+        d.qty,
+        `"${d.date}"`,
+        `"${d.time}"`,
+        `"${d.deliveredBy}"`,
+        `"${d.status}"`
+      ]);
+
+      const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `delivery_production_count_${Date.now()}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast("CSV file generated and downloaded.");
+    }
+
+    function handleRefresh() {
+      const icon = document.getElementById('refreshIcon');
+      icon.classList.add('animate-spin');
+      showToast("Syncing delivery production metrics...");
+
+      setTimeout(() => {
+        icon.classList.remove('animate-spin');
+        showToast("Metrics and activity logs up to date.");
+      }, 700);
+    }
+
+    function downloadFileDemo(fileName) {
+      showToast(`Download initiated for ${fileName}`);
+    }
+
+    /* ==========================================================
+       10. TOAST COMPONENT (MATCHING REWORK PAGE)
+       ========================================================== */
+    function showToast(message) {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = 'bg-slate-900 text-white text-xs font-medium px-4 py-2.5 rounded-xl shadow-xl flex items-center space-x-2 transition-all duration-300 transform translate-y-2 opacity-0';
+      toast.innerHTML = `
+        <i data-lucide="info" class="w-3.5 h-3.5 text-blue-400 shrink-0"></i>
+        <span>${message}</span>
+      `;
+      container.appendChild(toast);
+      lucide.createIcons();
+
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      });
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 2600);
+    }
+  </script>
+</body>
+</html>

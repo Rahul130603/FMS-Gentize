@@ -65,13 +65,9 @@ export default function FilterPanel({
     return () => document.removeEventListener('mousedown', handleOutside);
   }, []);
 
-  const currentEmpInfo = employees.find(e => e.name.toUpperCase() === (employee || '').toUpperCase()) || {
-    name: employee || 'SUDHIN',
-    role: 'BOOK SCAN',
-    color: 'bg-blue-100 text-blue-700'
-  };
+  const currentEmpInfo = employees.find(e => e.name.toUpperCase() === (employee || '').toUpperCase()) || null;
 
-  const empInitials = currentEmpInfo.name.split(' ').map(p => p[0]).join('').substring(0, 2).toUpperCase();
+  const empInitials = currentEmpInfo ? currentEmpInfo.name.split(' ').map(p => p[0]).join('').substring(0, 2).toUpperCase() : '';
   const currentRoleInfo = roleConfig.find(r => r.id === role) || roleConfig[0];
   const currentStatusInfo = statusConfig.find(s => s.id === status) || statusConfig[0];
   const RoleIcon = currentRoleInfo.icon;
@@ -79,7 +75,7 @@ export default function FilterPanel({
 
   const filteredEmployees = employees.filter(e => 
     e.name.toUpperCase().includes((empQuery || '').toUpperCase()) ||
-    e.role.toUpperCase().includes((empQuery || '').toUpperCase())
+    (e.role && e.role.toUpperCase().includes((empQuery || '').toUpperCase()))
   );
 
   return (
@@ -93,7 +89,10 @@ export default function FilterPanel({
         <div className="flex items-center space-x-2">
           <button 
             type="button" 
-            onClick={onReset}
+            onClick={() => {
+              setEmpQuery('');
+              onReset();
+            }}
             className="flex items-center space-x-1 px-2.5 py-1 text-xs font-semibold text-slate-600 hover:text-slate-900 rounded-lg hover:bg-slate-100 transition-all cursor-pointer border border-transparent hover:border-slate-200"
           >
             <RotateCcw className="w-3 h-3 text-slate-400" />
@@ -152,40 +151,48 @@ export default function FilterPanel({
         <div className="space-y-1 relative" ref={empRef}>
           <label className="text-2xs font-bold uppercase tracking-wider text-slate-500">Employee</label>
           <div className="relative group">
-            <div className="absolute left-2.5 top-1/2 -translate-y-1/2 flex items-center pointer-events-none z-10">
-              <div className={`w-5 h-5 rounded-full ${currentEmpInfo.color} text-[10px] font-bold flex items-center justify-center shrink-0`}>
-                {empInitials}
+            {currentEmpInfo && (
+              <div className="absolute left-2.5 top-1/2 -translate-y-1/2 flex items-center pointer-events-none z-10">
+                <div className={`w-5 h-5 rounded-full ${currentEmpInfo.color || 'bg-blue-100 text-blue-700'} text-[10px] font-bold flex items-center justify-center shrink-0`}>
+                  {empInitials}
+                </div>
               </div>
-            </div>
+            )}
             <input 
               type="text" 
               value={empQuery || employee} 
-              onFocus={() => setEmpDropdownOpen(true)}
+              placeholder={employees.length === 0 ? "No employees available" : "All Employees"}
+              disabled={employees.length === 0}
+              onFocus={() => { if (employees.length > 0) setEmpDropdownOpen(true); }}
               onChange={(e) => {
                 setEmpQuery(e.target.value);
                 setEmpDropdownOpen(true);
               }}
-              className="w-full text-xs rounded-lg border border-slate-200 pl-9 pr-16 py-2 text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-hidden font-semibold transition-all hover:border-slate-300 cursor-pointer" 
+              className={`w-full text-xs rounded-lg border border-slate-200 ${currentEmpInfo ? 'pl-9' : 'pl-3'} pr-16 py-2 text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-hidden font-semibold transition-all hover:border-slate-300 ${employees.length > 0 ? 'cursor-pointer' : 'cursor-not-allowed bg-slate-50'}`} 
             />
             <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center space-x-0.5 z-20">
-              <button 
-                type="button" 
-                onClick={() => {
-                  setEmpQuery('');
-                  setEmployee('SUDHIN');
-                }} 
-                className="w-6 h-6 rounded-md hover:bg-slate-100 text-slate-400 hover:text-rose-600 flex items-center justify-center text-xs transition-colors cursor-pointer" 
-                title="Reset Employee"
-              >
-                ✕
-              </button>
-              <button 
-                type="button" 
-                onClick={() => setEmpDropdownOpen(!empDropdownOpen)} 
-                className="w-6 h-6 rounded-md hover:bg-slate-100 text-slate-400 hover:text-blue-600 flex items-center justify-center transition-colors cursor-pointer"
-              >
-                <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${empDropdownOpen ? 'rotate-180' : ''}`} />
-              </button>
+              {employee && (
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    setEmpQuery('');
+                    setEmployee('');
+                  }} 
+                  className="w-6 h-6 rounded-md hover:bg-slate-100 text-slate-400 hover:text-rose-600 flex items-center justify-center text-xs transition-colors cursor-pointer" 
+                  title="Clear Employee"
+                >
+                  ✕
+                </button>
+              )}
+              {employees.length > 0 && (
+                <button 
+                  type="button" 
+                  onClick={() => setEmpDropdownOpen(!empDropdownOpen)} 
+                  className="w-6 h-6 rounded-md hover:bg-slate-100 text-slate-400 hover:text-blue-600 flex items-center justify-center transition-colors cursor-pointer"
+                >
+                  <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${empDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+              )}
             </div>
           </div>
 
@@ -218,14 +225,16 @@ export default function FilterPanel({
                         }`}
                       >
                         <div className="flex items-center space-x-2.5 min-w-0">
-                          <div className={`w-7 h-7 rounded-full ${emp.color} ${emp.border} border font-bold text-[11px] flex items-center justify-center shrink-0`}>
+                          <div className={`w-7 h-7 rounded-full ${emp.color || 'bg-slate-100 text-slate-700'} ${emp.border || 'border-slate-200'} border font-bold text-[11px] flex items-center justify-center shrink-0`}>
                             {initials}
                           </div>
                           <div className="min-w-0 text-left">
                             <div className="text-xs font-semibold truncate">{emp.name}</div>
-                            <div className="text-[10px] text-slate-400 font-medium">
-                              {emp.role} • {emp.dept}
-                            </div>
+                            {(emp.role || emp.dept) && (
+                              <div className="text-[10px] text-slate-400 font-medium">
+                                {[emp.role, emp.dept].filter(Boolean).join(' • ')}
+                              </div>
+                            )}
                           </div>
                         </div>
                         {isSelected && (

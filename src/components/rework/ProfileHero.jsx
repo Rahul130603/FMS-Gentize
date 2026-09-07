@@ -2,21 +2,22 @@ import React from 'react';
 
 export default function ProfileHero({
   employee,
-  employees,
+  employees = [],
   kpis,
   status,
   setStatus,
   displayInfo
 }) {
-  const currentEmpInfo = employees.find(e => e.name.toUpperCase() === (employee || '').toUpperCase()) || {
-    name: employee || 'SUDHIN',
-    role: 'BOOK SCAN',
-    dept: 'Book Scanning',
-    color: 'bg-blue-100 text-blue-700',
-    border: 'border-blue-200'
-  };
+  if (!employee || !employees || employees.length === 0) {
+    return null;
+  }
 
-  const initials = currentEmpInfo.name.split(' ').map(p => p[0]).join('').substring(0, 2).toUpperCase();
+  const currentEmpInfo = employees.find(e => e.name.toUpperCase() === (employee || '').toUpperCase());
+  if (!currentEmpInfo) {
+    return null;
+  }
+
+  const initials = (currentEmpInfo.name || '').split(' ').map(p => p[0]).join('').substring(0, 2).toUpperCase();
   const recoveryRate = kpis ? parseFloat(kpis.recovery_rate) || 0 : 0;
   const pendingRate = Math.max(0, 100 - recoveryRate);
 

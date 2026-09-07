@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import ReworkHeader from '../components/rework/ReworkHeader';
 import FilterPanel from '../components/rework/FilterPanel';
 import ProfileHero from '../components/rework/ProfileHero';
@@ -20,11 +20,20 @@ import {
   resolveReworkFile 
 } from '../services/reworkMetricsService';
 
+const getToday = () => {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return { iso: `${y}-${m}-${d}`, display: `${d}-${m}-${y}` };
+};
+
 export function ReworkPage() {
+  const initialDate = getToday();
   const [period, setPeriod] = useState('day');
-  const [date, setDate] = useState('05-09-2026');
-  const [dateIso, setDateIso] = useState('2026-09-05');
-  const [employee, setEmployee] = useState('SUDHIN');
+  const [date, setDate] = useState(initialDate.display);
+  const [dateIso, setDateIso] = useState(initialDate.iso);
+  const [employee, setEmployee] = useState('');
   const [role, setRole] = useState('All');
   const [status, setStatus] = useState('All');
 
@@ -130,10 +139,11 @@ export function ReworkPage() {
   };
 
   const handleResetFilters = async () => {
+    const today = getToday();
     setPeriod('day');
-    setDate('05-09-2026');
-    setDateIso('2026-09-05');
-    setEmployee('SUDHIN');
+    setDate(today.display);
+    setDateIso(today.iso);
+    setEmployee('');
     setRole('All');
     setStatus('All');
     showToast('Filters reset to default');

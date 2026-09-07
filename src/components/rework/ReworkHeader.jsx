@@ -39,14 +39,9 @@ export default function Header({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const currentEmpInfo = employees.find(e => e.name.toUpperCase() === (employee || '').toUpperCase()) || {
-    name: employee || 'SUDHIN',
-    role: 'BOOK SCAN',
-    dept: 'Book Scanning',
-    color: 'bg-blue-100 text-blue-700'
-  };
+  const currentEmpInfo = employees.find(e => e.name.toUpperCase() === (employee || '').toUpperCase()) || (employees.length > 0 ? employees[0] : null);
 
-  const initials = currentEmpInfo.name.split(' ').map(p => p[0]).join('').substring(0, 2).toUpperCase();
+  const initials = currentEmpInfo ? currentEmpInfo.name.split(' ').map(p => p[0]).join('').substring(0, 2).toUpperCase() : '';
 
   const filteredEmployees = employees.filter(e => 
     e.name.toUpperCase().includes(empSearchQuery.toUpperCase()) ||
@@ -159,81 +154,85 @@ export default function Header({
           </button>
         </div>
 
-        {/* Employee Selector Pill with Rich Dropdown */}
-        <div className="relative" ref={dropdownRef}>
-          <button 
-            type="button" 
-            onClick={() => setEmpDropdownOpen(!empDropdownOpen)} 
-            className="flex items-center border border-slate-200 hover:border-slate-300 rounded-lg px-3 py-1.5 bg-white text-xs font-semibold text-slate-800 space-x-2 cursor-pointer transition-all hover:bg-slate-50 shadow-2xs group"
-          >
-            <div className={`w-5 h-5 rounded-full ${currentEmpInfo.color} text-[10px] font-bold flex items-center justify-center shrink-0`}>
-              {initials}
-            </div>
-            <span>{currentEmpInfo.name}</span>
-            <ChevronDown className={`w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 transition-transform duration-200 ${empDropdownOpen ? 'rotate-180' : ''}`} />
-          </button>
-
-          {empDropdownOpen && (
-            <div className="absolute right-0 mt-2 w-72 bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl shadow-2xl z-50 overflow-hidden py-1">
-              <div className="p-2 border-b border-slate-100 bg-slate-50/70">
-                <input 
-                  type="text" 
-                  value={empSearchQuery}
-                  onChange={(e) => setEmpSearchQuery(e.target.value)}
-                  placeholder="Search operator..." 
-                  className="w-full text-xs rounded-xl border border-slate-200 px-3 py-1.5 bg-white text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-hidden font-medium" 
-                  autoFocus 
-                />
+        {/* Employee Selector Pill with Rich Dropdown (only when real backend employees exist) */}
+        {employees && employees.length > 0 && currentEmpInfo && (
+          <div className="relative" ref={dropdownRef}>
+            <button 
+              type="button" 
+              onClick={() => setEmpDropdownOpen(!empDropdownOpen)} 
+              className="flex items-center border border-slate-200 hover:border-slate-300 rounded-lg px-3 py-1.5 bg-white text-xs font-semibold text-slate-800 space-x-2 cursor-pointer transition-all hover:bg-slate-50 shadow-2xs group"
+            >
+              <div className={`w-5 h-5 rounded-full ${currentEmpInfo.color || 'bg-blue-100 text-blue-700'} text-[10px] font-bold flex items-center justify-center shrink-0`}>
+                {initials}
               </div>
+              <span>{currentEmpInfo.name}</span>
+              <ChevronDown className={`w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 transition-transform duration-200 ${empDropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
 
-              <div className="max-h-60 overflow-y-auto p-1.5 space-y-0.5 dropdown-scroll">
-                {filteredEmployees.length === 0 ? (
-                  <div className="py-6 text-center text-slate-400 text-xs">
-                    <UserX className="w-6 h-6 mx-auto text-slate-300 mb-1" />
-                    <span>No employees found</span>
-                  </div>
-                ) : (
-                  filteredEmployees.map(emp => {
-                    const isSelected = emp.name.toUpperCase() === (employee || '').toUpperCase();
-                    const empInitials = emp.name.split(' ').map(p => p[0]).join('').substring(0, 2).toUpperCase();
-                    return (
-                      <div 
-                        key={emp.name}
-                        onClick={() => {
-                          setEmployee(emp.name);
-                          setEmpDropdownOpen(false);
-                          setEmpSearchQuery('');
-                        }}
-                        className={`flex items-center justify-between px-2.5 py-2 rounded-xl cursor-pointer transition-all ${
-                          isSelected ? 'bg-blue-50/90 text-blue-900 font-semibold' : 'hover:bg-slate-50 text-slate-700'
-                        }`}
-                      >
-                        <div className="flex items-center space-x-2.5 min-w-0">
-                          <div className={`w-7 h-7 rounded-full ${emp.color} ${emp.border} border font-bold text-[11px] flex items-center justify-center shrink-0 shadow-2xs`}>
-                            {empInitials}
-                          </div>
-                          <div className="min-w-0 text-left">
-                            <div className="text-xs font-semibold truncate">{emp.name}</div>
-                            <div className="text-[10px] text-slate-400 font-medium flex items-center space-x-1">
-                              <span>{emp.role}</span>
-                              <span>•</span>
-                              <span className="text-slate-500">{emp.dept}</span>
+            {empDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-72 bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl shadow-2xl z-50 overflow-hidden py-1">
+                <div className="p-2 border-b border-slate-100 bg-slate-50/70">
+                  <input 
+                    type="text" 
+                    value={empSearchQuery}
+                    onChange={(e) => setEmpSearchQuery(e.target.value)}
+                    placeholder="Search operator..." 
+                    className="w-full text-xs rounded-xl border border-slate-200 px-3 py-1.5 bg-white text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-hidden font-medium" 
+                    autoFocus 
+                  />
+                </div>
+
+                <div className="max-h-60 overflow-y-auto p-1.5 space-y-0.5 dropdown-scroll">
+                  {filteredEmployees.length === 0 ? (
+                    <div className="py-6 text-center text-slate-400 text-xs">
+                      <UserX className="w-6 h-6 mx-auto text-slate-300 mb-1" />
+                      <span>No employees found</span>
+                    </div>
+                  ) : (
+                    filteredEmployees.map(emp => {
+                      const isSelected = emp.name.toUpperCase() === (employee || '').toUpperCase();
+                      const empInitials = emp.name.split(' ').map(p => p[0]).join('').substring(0, 2).toUpperCase();
+                      return (
+                        <div 
+                          key={emp.name}
+                          onClick={() => {
+                            setEmployee(emp.name);
+                            setEmpDropdownOpen(false);
+                            setEmpSearchQuery('');
+                          }}
+                          className={`flex items-center justify-between px-2.5 py-2 rounded-xl cursor-pointer transition-all ${
+                            isSelected ? 'bg-blue-50/90 text-blue-900 font-semibold' : 'hover:bg-slate-50 text-slate-700'
+                          }`}
+                        >
+                          <div className="flex items-center space-x-2.5 min-w-0">
+                            <div className={`w-7 h-7 rounded-full ${emp.color || 'bg-slate-100 text-slate-700'} ${emp.border || 'border-slate-200'} border font-bold text-[11px] flex items-center justify-center shrink-0 shadow-2xs`}>
+                              {empInitials}
+                            </div>
+                            <div className="min-w-0 text-left">
+                              <div className="text-xs font-semibold truncate">{emp.name}</div>
+                              {(emp.role || emp.dept) && (
+                                <div className="text-[10px] text-slate-400 font-medium flex items-center space-x-1">
+                                  {emp.role && <span>{emp.role}</span>}
+                                  {emp.role && emp.dept && <span>•</span>}
+                                  {emp.dept && <span className="text-slate-500">{emp.dept}</span>}
+                                </div>
+                              )}
                             </div>
                           </div>
+                          {isSelected && (
+                            <span className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-600 text-white text-[10px] font-bold shrink-0 ml-2 shadow-2xs">
+                              <Check className="w-3 h-3" />
+                            </span>
+                          )}
                         </div>
-                        {isSelected && (
-                          <span className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-600 text-white text-[10px] font-bold shrink-0 ml-2 shadow-2xs">
-                            <Check className="w-3 h-3" />
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })
-                )}
+                      );
+                    })
+                  )}
+                </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
 
       </div>
     </header>

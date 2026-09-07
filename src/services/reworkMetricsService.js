@@ -4,40 +4,24 @@
  * =============================================================================
  */
 
-export const employeeProfiles = [
-  { name: "SUDHIN", role: "BOOK SCAN", dept: "Book Scanning", color: "bg-blue-100 text-blue-700", border: "border-blue-200" },
-  { name: "RAHUL", role: "QC", dept: "QC", color: "bg-purple-100 text-purple-700", border: "border-purple-200" },
-  { name: "ARUN", role: "QAG", dept: "QAG", color: "bg-emerald-100 text-emerald-700", border: "border-emerald-200" },
-  { name: "PRIYA", role: "QC", dept: "QC", color: "bg-amber-100 text-amber-700", border: "border-amber-200" },
-  { name: "MANOJ", role: "QAG", dept: "QAG", color: "bg-rose-100 text-rose-700", border: "border-rose-200" },
-  { name: "RAGU", role: "COVER SCAN", dept: "Cover Scanning", color: "bg-indigo-100 text-indigo-700", border: "border-indigo-200" },
-  { name: "DHARSHANA", role: "QC", dept: "QC", color: "bg-pink-100 text-pink-700", border: "border-pink-200" },
-  { name: "SANTHOSH VIKRAM", role: "BOOK SCAN", dept: "Book Scanning", color: "bg-teal-100 text-teal-700", border: "border-teal-200" },
-  { name: "PRAVEENTHAN", role: "QC", dept: "QC", color: "bg-cyan-100 text-cyan-700", border: "border-cyan-200" },
-  { name: "MOHANAPRIYA", role: "QAG", dept: "QAG", color: "bg-orange-100 text-orange-700", border: "border-orange-200" },
-  { name: "UDHAI", role: "COVER SCAN", dept: "Cover Scanning", color: "bg-blue-100 text-blue-700", border: "border-blue-200" },
-  { name: "LAKSHMI", role: "QC", dept: "QC", color: "bg-purple-100 text-purple-700", border: "border-purple-200" },
-  { name: "PRAKASH", role: "BOOK SCAN", dept: "Book Scanning", color: "bg-emerald-100 text-emerald-700", border: "border-emerald-200" },
-  { name: "SHEEBA", role: "QC", dept: "QC", color: "bg-amber-100 text-amber-700", border: "border-amber-200" },
-  { name: "SANTHOSH M", role: "COVER SCAN", dept: "Cover Scanning", color: "bg-rose-100 text-rose-700", border: "border-rose-200" },
-  { name: "KALPANA", role: "QAG", dept: "QAG", color: "bg-indigo-100 text-indigo-700", border: "border-indigo-200" },
-  { name: "SARANYA", role: "QC", dept: "QC", color: "bg-pink-100 text-pink-700", border: "border-pink-200" },
-  { name: "PRADHAP", role: "BOOK SCAN", dept: "Book Scanning", color: "bg-teal-100 text-teal-700", border: "border-teal-200" },
-  { name: "ABDUL", role: "QC", dept: "QC", color: "bg-cyan-100 text-cyan-700", border: "border-cyan-200" },
-  { name: "BHAVANI", role: "QAG", dept: "QAG", color: "bg-orange-100 text-orange-700", border: "border-orange-200" },
-  { name: "SWETHA", role: "QC", dept: "QC", color: "bg-blue-100 text-blue-700", border: "border-blue-200" },
-  { name: "DEENA", role: "COVER SCAN", dept: "Cover Scanning", color: "bg-purple-100 text-purple-700", border: "border-purple-200" },
-  { name: "DEVI", role: "QC", dept: "QC", color: "bg-emerald-100 text-emerald-700", border: "border-emerald-200" },
-  { name: "JAYASURIYA", role: "BOOK SCAN", dept: "Book Scanning", color: "bg-amber-100 text-amber-700", border: "border-amber-200" }
-];
+export const employeeProfiles = [];
 
 export function getEmployeeInfo(name) {
+  if (!name) {
+    return {
+      name: "",
+      role: "",
+      dept: "",
+      color: "bg-slate-100 text-slate-700",
+      border: "border-slate-200"
+    };
+  }
   const found = employeeProfiles.find(e => e.name.toUpperCase() === (name || '').toUpperCase());
   if (found) return found;
   return {
-    name: name || "UNKNOWN",
-    role: "BOOK SCAN",
-    dept: "Scanning",
+    name: name,
+    role: "",
+    dept: "",
     color: "bg-slate-100 text-slate-700",
     border: "border-slate-200"
   };
@@ -110,7 +94,7 @@ export function getPeriodDisplayInfo(dateStr, period) {
 }
 
 export function calculateDashboardMetrics(employeeName, dateStr, period = 'day', filters = {}, persistentResolutions = {}) {
-  const empName = employeeName || 'SUDHIN';
+  const empName = employeeName || '';
   const info = getEmployeeInfo(empName);
 
   const dt = parseDate(dateStr);
@@ -140,7 +124,7 @@ export function calculateDashboardMetrics(employeeName, dateStr, period = 'day',
   let totalReject = 0;
   let baseRatePct = 0.80;
 
-  if (empName.toUpperCase() === 'SUDHIN') {
+  if (false) {
     if (period === 'month') {
       if (isBaseMonth) {
         assignedRework = 780;
@@ -453,7 +437,7 @@ export function calculateDashboardMetrics(employeeName, dateStr, period = 'day',
     }
   }
 
-  let compEmployees = ['SUDHIN', 'RAHUL', 'ARUN', 'PRIYA', 'MANOJ', 'BHAVANI', 'RAGU', 'DHARSHANA'];
+  let compEmployees = employeeProfiles.map(e => e.name);
   if (roleFilter !== 'All') {
     const matchingEmps = employeeProfiles.filter(e => e.role === roleFilter).map(e => e.name);
     if (matchingEmps.length > 0) {
@@ -596,14 +580,14 @@ export async function fetchReworkEmployees() {
     const res = await fetch('/api/employees');
     if (res.ok) return await res.json();
   } catch (e) {}
-  return employeeProfiles;
+  return [];
 }
 
 export async function fetchReworkDashboard(employee, date, period = 'day', filters = {}) {
   try {
     const params = new URLSearchParams({
-      employee: employee || 'SUDHIN',
-      date: date || '05-09-2026',
+      employee: employee || '',
+      date: date || '',
       period: period || 'day',
       role: filters.role || 'All',
       status: filters.status || 'All'

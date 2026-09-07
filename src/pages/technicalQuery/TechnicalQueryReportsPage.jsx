@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Inbox, CheckCircle2, XCircle, Flame, Clock, Hourglass, RotateCcw, ListChecks, BarChart3, TrendingUp
 } from 'lucide-react';
@@ -10,6 +10,8 @@ import { reportApi } from '../../services/technicalQueryApi';
 import { formatHours } from '../../utils/tqFormatters';
 import { CATEGORY_LABELS } from '../../constants/technicalQuery';
 import '../../styles/technical-query.css';
+
+import ErrorBoundary from '../../components/common/ErrorBoundary';
 
 export function TechnicalQueryReportsPage() {
   const [data, setData] = useState(null);
@@ -23,14 +25,17 @@ export function TechnicalQueryReportsPage() {
       reportApi.categoryAnalytics(),
       reportApi.trendReport()
     ]).then(([d, c, t]) => {
-      setData(d.data);
+      setData(d?.data || null);
       setCatData(
-        (c.data || []).map((item) => ({
+        (c?.data || []).map((item) => ({
           name: CATEGORY_LABELS[item.category] || item.category,
           count: item.count
         }))
       );
-      setTrendData(t.data || []);
+      setTrendData(t?.data || []);
+      setLoading(false);
+    }).catch((err) => {
+      console.error('Error fetching technical query reports:', err);
       setLoading(false);
     });
   }, []);
@@ -62,23 +67,30 @@ export function TechnicalQueryReportsPage() {
       )}
 
       {/* Visual Telemetry Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <BarChartCard
-          title="Root Cause / Category Distribution"
-          data={catData}
-          xKey="name"
-          series={[{ key: 'count', name: 'Queries', color: '#026bc7' }]}
-        />
-        <LineChartCard
-          title="Daily Query Volume & Resolution Trend"
-          data={trendData}
-          xKey="date"
-          series={[
-            { key: 'raised', name: 'Raised', color: '#ef4444' },
-            { key: 'resolved', name: 'Resolved', color: '#10b981' }
-          ]}
-        />
-      </div>
+      <ErrorBoundary fallbackTitle="Could not load charts">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <BarChartCard
+            title="Root Cause / Category Distribution"
+            data={catData}
+            xKey="name"
+            bars={[{ key: 'count', label: 'Queries', color: '#026bc7' }]}
+            series={[{ key: 'count', label: 'Queries', color: '#026bc7' }]}
+          />
+          <LineChartCard
+            title="Daily Query Volume & Resolution Trend"
+            data={trendData}
+            xKey="date"
+            lines={[
+              { key: 'raised', label: 'Raised', color: '#ef4444' },
+              { key: 'resolved', label: 'Resolved', color: '#10b981' }
+            ]}
+            series={[
+              { key: 'raised', label: 'Raised', color: '#ef4444' },
+              { key: 'resolved', label: 'Resolved', color: '#10b981' }
+            ]}
+          />
+        </div>
+      </ErrorBoundary>
     </div>
   );
 }

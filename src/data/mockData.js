@@ -1,12 +1,12 @@
 // Data configuration for Book Publishing Management System (FMS)
 
 export const CURRENT_USER = {
-  id: 'USR-8821',
-  name: 'Pradhap Kumar',
-  role: 'Senior Digital Production Lead',
-  department: 'Digital Publishing & Accessibility',
-  avatar: 'PK',
-  email: 'pradhap.k@pubflow.com',
+  id: '',
+  name: '',
+  role: '',
+  department: '',
+  avatar: '',
+  email: '',
 };
 
 export const PUBLISHING_CLIENTS = [];

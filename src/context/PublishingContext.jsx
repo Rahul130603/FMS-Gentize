@@ -82,7 +82,7 @@ export function PublishingProvider({ children }) {
         status: 'Assigned',
         icon: 'UserCheck',
         color: 'text-indigo-600 bg-indigo-50 border-indigo-200',
-        user: 'Pradhap Kumar'
+        user: 'System'
       };
       setActivities(prev => [newActivity, ...prev]);
 

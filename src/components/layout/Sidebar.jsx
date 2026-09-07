@@ -25,11 +25,9 @@ import {
   MessageSquarePlus,
   LifeBuoy
 } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
 import { usePublishing } from '../../context/PublishingContext';
 
 export function Sidebar({ mobileOpen, setMobileOpen }) {
-  const { user } = useAuth();
   const { incomingProjects, myProjects } = usePublishing();
   const location = useLocation();
   const [reportsOpen, setReportsOpen] = useState(true);
@@ -318,23 +316,6 @@ export function Sidebar({ mobileOpen, setMobileOpen }) {
               Production Grid Online
             </span>
             <span className="font-mono text-slate-400">v2.4.0</span>
-          </div>
-        </div>
-
-        {/* User Profile Footer */}
-        <div className="p-3 border-t border-slate-200 bg-white">
-          <div className="flex items-center gap-3 p-2 rounded-lg bg-slate-50/80 border border-slate-200/80">
-            <div className="w-8 h-8 rounded-full bg-brand-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
-              {user.avatar || 'PK'}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-bold text-slate-900 truncate">
-                {user.name}
-              </p>
-              <p className="text-[11px] text-slate-500 truncate">
-                {user.role}
-              </p>
-            </div>
           </div>
         </div>
       </aside>

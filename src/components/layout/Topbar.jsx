@@ -11,11 +11,9 @@ import {
   Clock,
   UserCheck
 } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
 import { usePublishing } from '../../context/PublishingContext';
 
 export function Topbar({ setMobileOpen }) {
-  const { user } = useAuth();
   const { activities } = usePublishing();
   const location = useLocation();
   const [showNotifications, setShowNotifications] = useState(false);
@@ -128,16 +126,6 @@ export function Topbar({ setMobileOpen }) {
               </div>
             </div>
           )}
-        </div>
-
-        {/* User Pill */}
-        <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
-          <div className="w-8 h-8 rounded-full bg-brand-600 text-white font-bold text-xs flex items-center justify-center shadow-xs">
-            {user.avatar || 'PK'}
-          </div>
-          <span className="text-xs font-bold text-slate-800 hidden sm:inline">
-            {user.name.split(' ')[0]}
-          </span>
         </div>
       </div>
     </header>

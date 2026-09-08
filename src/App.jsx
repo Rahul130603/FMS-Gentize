@@ -25,32 +25,32 @@ import {
 // Realistic customer data profiles for dynamic metric recalculation
 const CUSTOMER_PROFILES = {
   'ABC Publishing': {
-    total: 384, month: 286, week: 71, today: 14, pending: 8, successRate: '98.8%',
+    total: 384, month: 286, week: 71, today: 0, pending: 8, successRate: '98.8%',
     breakdown: { 'POD': 128, 'EPDF': 82, 'SCANNED FILE': 52, 'E-ISBN': 24 },
     factor: 286 / 1248
   },
   'XYZ Books': {
-    total: 320, month: 241, week: 62, today: 12, pending: 6, successRate: '98.2%',
+    total: 320, month: 241, week: 62, today: 0, pending: 6, successRate: '98.2%',
     breakdown: { 'POD': 68, 'EPDF': 94, 'SCANNED FILE': 54, 'E-ISBN': 25 },
     factor: 241 / 1248
   },
   'Global Publications': {
-    total: 275, month: 198, week: 51, today: 9, pending: 5, successRate: '97.9%',
+    total: 275, month: 198, week: 51, today: 0, pending: 5, successRate: '97.9%',
     breakdown: { 'POD': 46, 'EPDF': 38, 'SCANNED FILE': 96, 'E-ISBN': 18 },
     factor: 198 / 1248
   },
   'Prime Publishers': {
-    total: 240, month: 176, week: 44, today: 8, pending: 4, successRate: '99.1%',
+    total: 240, month: 176, week: 44, today: 0, pending: 4, successRate: '99.1%',
     breakdown: { 'POD': 58, 'EPDF': 52, 'SCANNED FILE': 41, 'E-ISBN': 25 },
     factor: 176 / 1248
   },
   'Sunrise Publications': {
-    total: 195, month: 143, week: 36, today: 6, pending: 3, successRate: '98.6%',
+    total: 195, month: 143, week: 36, today: 0, pending: 3, successRate: '98.6%',
     breakdown: { 'POD': 51, 'EPDF': 39, 'SCANNED FILE': 36, 'E-ISBN': 17 },
     factor: 143 / 1248
   },
   'Knowledge House': {
-    total: 160, month: 122, week: 22, today: 4, pending: 2, successRate: '99.4%',
+    total: 160, month: 122, week: 22, today: 0, pending: 2, successRate: '99.4%',
     breakdown: { 'POD': 42, 'EPDF': 35, 'SCANNED FILE': 28, 'E-ISBN': 17 },
     factor: 122 / 1248
   }
@@ -189,12 +189,10 @@ export default function App() {
       }
       // Date Range filter
       if (filters.dateRange === 'today') {
-        const isToday = item.date === '08 Sep 2026' || item.date === '07 Sep 2026';
-        if (!isToday) return false;
+        if (item.date !== '08 Sep 2026') return false;
       }
       if (filters.dateRange === 'yesterday') {
-        const isYesterday = item.date === '06 Sep 2026';
-        if (!isYesterday) return false;
+        if (item.date !== '07 Sep 2026') return false;
       }
       // Search keyword filter (ISBN, Title, Author, File, Customer, ID, Delivered By, Type)
       if (filters.search) {
@@ -225,14 +223,29 @@ export default function App() {
     });
   }, [deliveries, filters]);
 
+  // Dynamic calculation of items added today ('08 Sep 2026')
+  const todayImportedQty = useMemo(() => {
+    return deliveries
+      .filter((item) => {
+        // Customer filter
+        if (filters.customer !== 'all' && item.customer !== filters.customer) return false;
+        // Type filter
+        if (filters.type !== 'all' && item.type !== filters.type) return false;
+        // Check date for today ('08 Sep 2026')
+        return item.date === '08 Sep 2026';
+      })
+      .reduce((sum, item) => sum + (Number(item.qty) || Number(item.filesCount) || 1), 0);
+  }, [deliveries, filters.customer, filters.type]);
+
   // 2. Dynamic KPI Cards
   const activeKpis = useMemo(() => {
     const custProfile = CUSTOMER_PROFILES[filters.customer];
 
-    let baseToday = custProfile ? custProfile.today : (rawKpis?.today ?? 48);
-    let baseWeek = custProfile ? custProfile.week : (rawKpis?.week ?? 286);
-    let baseMonth = custProfile ? custProfile.month : (rawKpis?.month ?? 1248);
-    let baseTotal = custProfile ? custProfile.total : (rawKpis?.total ?? 1864);
+    // Today starts at 0, and updates with items imported/added today!
+    let baseToday = todayImportedQty;
+    let baseWeek = (custProfile ? custProfile.week : (rawKpis?.week ?? 286)) + todayImportedQty;
+    let baseMonth = (custProfile ? custProfile.month : (rawKpis?.month ?? 1248)) + todayImportedQty;
+    let baseTotal = (custProfile ? custProfile.total : (rawKpis?.total ?? 1864)) + todayImportedQty;
     let basePending = custProfile ? custProfile.pending : (rawKpis?.pending ?? 37);
     let baseSuccess = custProfile ? custProfile.successRate : (rawKpis?.successRate ?? '98.4%');
 
@@ -243,20 +256,10 @@ export default function App() {
       else if (filters.type === 'SCANNED FILE') typeFactor = 0.239;
       else if (filters.type === 'E-ISBN') typeFactor = 0.139;
 
-      baseToday = Math.max(1, Math.round(baseToday * typeFactor));
       baseWeek = Math.max(2, Math.round(baseWeek * typeFactor));
       baseMonth = Math.max(5, Math.round(baseMonth * typeFactor));
       baseTotal = Math.max(8, Math.round(baseTotal * typeFactor));
       basePending = Math.max(0, Math.round(basePending * typeFactor));
-    }
-
-    // Date range focus
-    if (filters.dateRange === 'today') {
-      baseWeek = baseToday;
-      baseMonth = baseToday;
-      baseTotal = baseToday;
-    } else if (filters.dateRange === 'yesterday') {
-      baseToday = 0;
     }
 
     return {
@@ -267,7 +270,7 @@ export default function App() {
       pending: basePending,
       successRate: baseSuccess
     };
-  }, [filters, rawKpis]);
+  }, [filters.customer, filters.type, rawKpis, todayImportedQty]);
 
   // 3. Dynamic Donut Breakdown
   const activeTypeBreakdown = useMemo(() => {

@@ -15,10 +15,10 @@ import {
 } from 'lucide-react';
 
 const DATE_OPTIONS = [
-  { id: 'today', label: 'Today', badge: 'Daily', sub: '07 Sep 2026', icon: Calendar },
-  { id: 'yesterday', label: 'Yesterday', badge: 'Prior Day', sub: '06 Sep 2026', icon: Calendar },
+  { id: 'today', label: 'Today', badge: 'Daily', sub: '08 Sep 2026', icon: Calendar },
+  { id: 'yesterday', label: 'Yesterday', badge: 'Prior Day', sub: '07 Sep 2026', icon: Calendar },
   { id: 'last7', label: 'Last 7 Days', badge: '7 Days', sub: 'Past 7 calendar days', icon: Calendar },
-  { id: 'week', label: 'This Week', badge: 'Weekly', sub: 'Current work week (01 - 07 Sep)', icon: Calendar },
+  { id: 'week', label: 'This Week', badge: 'Weekly', sub: 'Current work week (01 - 08 Sep)', icon: Calendar },
   { id: 'month', label: 'This Month', badge: 'Monthly', sub: 'September 2026 full month', icon: Calendar },
   { id: 'custom', label: 'Custom Range', badge: 'Custom', sub: 'Filter custom delivery dates', icon: Calendar }
 ];
@@ -93,9 +93,9 @@ export default function FilterPanel({
   };
 
   const getPeriodHint = () => {
-    if (quickDateScope === 'today') return 'Period: Today (07 Sep 2026)';
+    if (quickDateScope === 'today') return 'Period: Today (08 Sep 2026)';
     if (quickDateScope === 'month') return 'Period: Month of September 2026';
-    return 'Period: 01 Sep 2026 - 07 Sep 2026';
+    return 'Period: 01 Sep 2026 - 08 Sep 2026';
   };
 
   const TypeIcon = currentTypeOption.icon;

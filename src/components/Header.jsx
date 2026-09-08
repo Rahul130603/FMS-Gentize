@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Truck, ChevronLeft, ChevronRight, Calendar, ChevronDown, RefreshCw, Download, FileSpreadsheet, FileText, File, Filter, Plus } from 'lucide-react';
+import { Truck, ChevronDown, RefreshCw, Download, FileSpreadsheet, FileText, File, Filter, Plus } from 'lucide-react';
 
 export default function Header({
   onRefresh,
@@ -11,7 +11,6 @@ export default function Header({
   onOpenNewDeliveryModal
 }) {
   const [exportOpen, setExportOpen] = useState(false);
-  const [dateRangeText, setDateRangeText] = useState('01 Sep 2026 - 07 Sep 2026');
   const exportRef = useRef(null);
 
   useEffect(() => {
@@ -23,12 +22,6 @@ export default function Header({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  const handleNavigateRange = (delta) => {
-    if (showToast) {
-      showToast(delta < 0 ? 'Navigated to previous period' : 'Navigated to next period');
-    }
-  };
 
   return (
     <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between shrink-0 sticky top-0 z-30 shadow-2xs">
@@ -54,37 +47,6 @@ export default function Header({
 
       {/* Right: Header Controls */}
       <div className="flex items-center space-x-3">
-        {/* Date Range Selector Badge */}
-        <div className="flex items-center space-x-1">
-          <button
-            type="button"
-            onClick={() => handleNavigateRange(-1)}
-            className="p-1.5 rounded-lg border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 text-slate-500 hover:text-blue-600 transition-all shadow-2xs cursor-pointer flex items-center justify-center"
-            title="Previous Range"
-          >
-            <ChevronLeft className="w-3.5 h-3.5" />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => showToast && showToast(`Active range: ${dateRangeText}`)}
-            className="flex items-center border border-slate-200 hover:border-slate-300 rounded-lg px-3 py-1.5 bg-white text-xs font-semibold text-slate-700 space-x-2 cursor-pointer transition-all hover:bg-slate-50 shadow-2xs group"
-          >
-            <Calendar className="w-3.5 h-3.5 text-blue-600" />
-            <span>{dateRangeText}</span>
-            <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 transition-colors" />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleNavigateRange(1)}
-            className="p-1.5 rounded-lg border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 text-slate-500 hover:text-blue-600 transition-all shadow-2xs cursor-pointer flex items-center justify-center"
-            title="Next Range"
-          >
-            <ChevronRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
         {/* Refresh Button */}
         <button
           type="button"

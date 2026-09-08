@@ -19,14 +19,20 @@ export default function KpiCards({ kpis, prodType = 'all' }) {
   return (
     <section className="bg-white rounded-xl border border-slate-200/90 shadow-2xs p-5">
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
-        {/* Card 1: Today's Delivery */}
+        {/* Card 1: Today's Delivery or Chosen Date Delivery */}
         <div className="bg-blue-50/60 border border-blue-200/80 rounded-xl p-3.5 shadow-2xs transition-all hover:border-blue-300">
           <div className="text-2xs font-bold text-blue-800 flex items-center justify-between">
-            <span>TODAY'S DELIVERY</span>
-            <Calendar className="w-3.5 h-3.5 text-blue-600" />
+            <span className="truncate max-w-[140px]" title={kpis?.selectedDate ? `DELIVERY: ${kpis.selectedDate}` : "TODAY'S DELIVERY"}>
+              {kpis?.selectedDate ? `DELIVERY: ${kpis.selectedDate.toUpperCase()}` : "TODAY'S DELIVERY"}
+            </span>
+            <Calendar className="w-3.5 h-3.5 text-blue-600 shrink-0" />
           </div>
-          <div className="text-2xl font-black text-blue-600 mt-1.5">{today}</div>
-          <div className="text-[10px] text-blue-700/80 font-medium mt-0.5">Files Delivered Today</div>
+          <div className="text-2xl font-black text-blue-600 mt-1.5">
+            {kpis?.selectedDate ? (kpis.selectedDateCount ?? 0) : today}
+          </div>
+          <div className="text-[10px] text-blue-700/80 font-medium mt-0.5 truncate">
+            {kpis?.selectedDate ? `Files on ${kpis.selectedDate}` : "Files Delivered Today"}
+          </div>
         </div>
 
         {/* Card 2: This Week */}

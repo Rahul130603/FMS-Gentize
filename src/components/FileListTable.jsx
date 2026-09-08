@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Eye, Download, FileText, ChevronLeft, ChevronRight, ChevronDown, Check } from 'lucide-react';
+import { Search, Eye, Download, FileText, ChevronLeft, ChevronRight, ChevronDown, Check, Calendar } from 'lucide-react';
 
 export default function FileListTable({
   deliveries = [],
@@ -214,6 +214,108 @@ export default function FileListTable({
             )}
           </div>
 
+          {/* Date custom dropdown & Picker */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setActiveDropdown(activeDropdown === 'date' ? null : 'date')}
+              className={`text-xs rounded-lg border px-2.5 py-1.5 font-medium outline-hidden cursor-pointer flex items-center space-x-1.5 shadow-2xs transition-all ${
+                filters?.selectedDate || activeDropdown === 'date'
+                  ? 'border-blue-400 bg-blue-50 text-blue-700 font-bold shadow-xs'
+                  : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+              }`}
+              title="Filter deliveries by choosing any date"
+            >
+              <Calendar className="w-3.5 h-3.5 text-blue-600" />
+              <span>{filters?.selectedDate ? filters.selectedDate : 'Date: All'}</span>
+              <ChevronDown
+                className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
+                  activeDropdown === 'date' ? 'rotate-180 text-blue-600' : ''
+                }`}
+              />
+            </button>
+            {activeDropdown === 'date' && (
+              <div className="absolute right-0 mt-1.5 w-64 bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl shadow-xl z-40 p-3 space-y-2.5">
+                <div className="flex items-center justify-between pb-1 border-b border-slate-100">
+                  <span className="text-2xs font-bold text-slate-800 uppercase tracking-wider">
+                    Select Delivery Date
+                  </span>
+                  {filters?.selectedDate && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onFilterChange('selectedDate', '');
+                        setCurrentPage(1);
+                        setActiveDropdown(null);
+                      }}
+                      className="text-[10px] font-bold text-rose-600 hover:underline cursor-pointer"
+                    >
+                      Clear Date
+                    </button>
+                  )}
+                </div>
+
+                {/* Pick any custom date via HTML5 date picker */}
+                <div>
+                  <label className="block text-[10px] text-slate-500 font-bold mb-1">
+                    Pick calendar date:
+                  </label>
+                  <input
+                    type="date"
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        onFilterChange('selectedDate', e.target.value);
+                        setCurrentPage(1);
+                        setActiveDropdown(null);
+                      }
+                    }}
+                    className="w-full text-xs rounded-lg border border-slate-200 px-2.5 py-1.5 font-semibold text-slate-800 bg-white cursor-pointer hover:border-blue-400 focus:border-blue-500 outline-hidden"
+                  />
+                </div>
+
+                {/* Quick Date List */}
+                <div>
+                  <label className="block text-[10px] text-slate-500 font-bold mb-1">
+                    Or select from existing dates:
+                  </label>
+                  <div className="space-y-1 max-h-36 overflow-y-auto pr-1">
+                    {[
+                      { date: '', label: 'All Dates (Show All)' },
+                      { date: '08 Sep 2026', label: '08 Sep 2026 (Today)' },
+                      { date: '07 Sep 2026', label: '07 Sep 2026 (176 items)' },
+                      { date: '06 Sep 2026', label: '06 Sep 2026 (88 items)' },
+                      { date: '05 Sep 2026', label: '05 Sep 2026 (87 items)' },
+                      { date: '04 Sep 2026', label: '04 Sep 2026 (63 items)' },
+                      { date: '03 Sep 2026', label: '03 Sep 2026 (61 items)' },
+                      { date: '02 Sep 2026', label: '02 Sep 2026 (102 items)' },
+                      { date: '01 Sep 2026', label: '01 Sep 2026 (85 items)' }
+                    ].map((d) => (
+                      <button
+                        key={d.date}
+                        type="button"
+                        onClick={() => {
+                          onFilterChange('selectedDate', d.date);
+                          setCurrentPage(1);
+                          setActiveDropdown(null);
+                        }}
+                        className={`w-full text-left px-2.5 py-1 rounded-lg text-xs transition-colors flex items-center justify-between cursor-pointer ${
+                          (filters?.selectedDate || '') === d.date
+                            ? 'bg-blue-600 text-white font-bold'
+                            : 'text-slate-700 hover:bg-slate-100 font-medium'
+                        }`}
+                      >
+                        <span>{d.label}</span>
+                        {(filters?.selectedDate || '') === d.date && (
+                          <Check className="w-3 h-3 text-white" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Status custom dropdown */}
           <div className="relative">
             <button
@@ -310,6 +412,30 @@ export default function FileListTable({
           </div>
         </div>
       </div>
+
+      {/* Chosen Date Filter Banner */}
+      {filters?.selectedDate && (
+        <div className="flex items-center justify-between px-3.5 py-2 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-950 font-medium animate-in fade-in duration-150">
+          <div className="flex items-center space-x-2">
+            <div className="w-5 h-5 rounded-md bg-blue-600 text-white flex items-center justify-center">
+              <Calendar className="w-3 h-3" />
+            </div>
+            <span>
+              Showing deliveries on chosen date: <strong className="font-extrabold text-blue-700">{filters.selectedDate}</strong>
+            </span>
+            <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 text-[10px] font-extrabold">
+              {totalCount} Deliveries Found
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => onFilterChange('selectedDate', '')}
+            className="text-xs font-bold text-blue-700 hover:text-rose-600 hover:underline cursor-pointer transition-colors"
+          >
+            Show All Dates (Clear)
+          </button>
+        </div>
+      )}
 
       {/* Responsive Table Container */}
       <div className="overflow-x-auto">

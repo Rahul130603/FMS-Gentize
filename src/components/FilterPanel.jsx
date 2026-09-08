@@ -89,10 +89,12 @@ export default function FilterPanel({
   const getActiveFilterText = () => {
     const typeLabel = filters.type === 'all' ? 'All Types' : filters.type;
     const custLabel = filters.customer === 'all' ? 'All Customers' : filters.customer;
-    return `${typeLabel} • ${custLabel}`;
+    const dateLabel = filters?.selectedDate ? filters.selectedDate : (filters?.dateRange === 'today' ? 'Today' : filters?.dateRange === 'week' ? 'This Week' : 'All Dates');
+    return `${dateLabel} • ${typeLabel} • ${custLabel}`;
   };
 
   const getPeriodHint = () => {
+    if (filters?.selectedDate) return `Period: Chosen Date (${filters.selectedDate})`;
     if (quickDateScope === 'today') return 'Period: Today (08 Sep 2026)';
     if (quickDateScope === 'month') return 'Period: Month of September 2026';
     return 'Period: 01 Sep 2026 - 08 Sep 2026';
@@ -114,11 +116,12 @@ export default function FilterPanel({
             <button
               type="button"
               onClick={() => {
+                onFilterChange('selectedDate', '');
                 setQuickDateScope('today');
                 onFilterChange('dateRange', 'today');
               }}
               className={`px-2.5 py-1 rounded-md text-xs transition-all cursor-pointer ${
-                quickDateScope === 'today'
+                !filters?.selectedDate && quickDateScope === 'today'
                   ? 'font-bold bg-white text-blue-700 shadow-2xs'
                   : 'font-medium text-slate-600 hover:text-slate-900'
               }`}
@@ -128,11 +131,12 @@ export default function FilterPanel({
             <button
               type="button"
               onClick={() => {
+                onFilterChange('selectedDate', '');
                 setQuickDateScope('week');
                 onFilterChange('dateRange', 'week');
               }}
               className={`px-2.5 py-1 rounded-md text-xs transition-all cursor-pointer ${
-                quickDateScope === 'week'
+                !filters?.selectedDate && quickDateScope === 'week'
                   ? 'font-bold bg-white text-blue-700 shadow-2xs'
                   : 'font-medium text-slate-600 hover:text-slate-900'
               }`}
@@ -142,16 +146,32 @@ export default function FilterPanel({
             <button
               type="button"
               onClick={() => {
+                onFilterChange('selectedDate', '');
                 setQuickDateScope('month');
                 onFilterChange('dateRange', 'month');
               }}
               className={`px-2.5 py-1 rounded-md text-xs transition-all cursor-pointer ${
-                quickDateScope === 'month'
+                !filters?.selectedDate && quickDateScope === 'month'
                   ? 'font-bold bg-white text-blue-700 shadow-2xs'
                   : 'font-medium text-slate-600 hover:text-slate-900'
               }`}
             >
               This Month
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setDateDropdownOpen(true);
+              }}
+              className={`px-2.5 py-1 rounded-md text-xs transition-all cursor-pointer flex items-center space-x-1 ${
+                filters?.selectedDate
+                  ? 'font-bold bg-white text-blue-700 shadow-2xs border border-blue-200'
+                  : 'font-medium text-slate-600 hover:text-slate-900'
+              }`}
+              title="Pick any specific date from calendar"
+            >
+              <Calendar className="w-3 h-3 text-blue-600" />
+              <span>{filters?.selectedDate ? filters.selectedDate : 'Choose Date'}</span>
             </button>
           </div>
         </div>
@@ -204,7 +224,9 @@ export default function FilterPanel({
               <div className="w-5 h-5 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
                 <DateIcon className="w-3.5 h-3.5" />
               </div>
-              <span className="font-semibold text-slate-900 truncate">{currentDateOption.label}</span>
+              <span className="font-semibold text-slate-900 truncate">
+                {filters?.selectedDate ? `Date: ${filters.selectedDate}` : currentDateOption.label}
+              </span>
             </div>
             <ChevronDown
               className={`w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-transform duration-200 ${
@@ -226,14 +248,47 @@ export default function FilterPanel({
                   {DATE_OPTIONS.length}
                 </span>
               </div>
+
+              {/* Pick custom calendar date */}
+              <div className="p-2.5 border-b border-slate-100 bg-blue-50/50">
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-600 mb-1">
+                  Choose Specific Date:
+                </label>
+                <div className="flex items-center space-x-1.5">
+                  <input
+                    type="date"
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        onFilterChange('selectedDate', e.target.value);
+                        setDateDropdownOpen(false);
+                      }
+                    }}
+                    className="w-full text-xs rounded-lg border border-slate-200 px-2 py-1.5 font-semibold text-slate-800 bg-white hover:border-blue-400 focus:border-blue-500 outline-hidden cursor-pointer"
+                  />
+                  {filters?.selectedDate && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onFilterChange('selectedDate', '');
+                        setDateDropdownOpen(false);
+                      }}
+                      className="px-2 py-1.5 bg-white border border-rose-200 text-rose-600 rounded-lg text-2xs font-bold shrink-0 hover:bg-rose-50 cursor-pointer"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+              </div>
+
               <div className="p-1.5 space-y-1">
                 {DATE_OPTIONS.map((opt) => {
-                  const isSelected = opt.id === filters.dateRange;
+                  const isSelected = !filters?.selectedDate && opt.id === filters.dateRange;
                   const Icon = opt.icon;
                   return (
                     <div
                       key={opt.id}
                       onClick={() => {
+                        onFilterChange('selectedDate', '');
                         onFilterChange('dateRange', opt.id);
                         setQuickDateScope(opt.id);
                         setDateDropdownOpen(false);

@@ -77,6 +77,7 @@ export default function App() {
   // Unified Filter State
   const [filters, setFilters] = useState({
     dateRange: 'week',
+    selectedDate: '',
     type: 'all',
     customer: 'all',
     status: 'all',
@@ -155,6 +156,7 @@ export default function App() {
   const handleResetFilters = () => {
     setFilters({
       dateRange: 'week',
+      selectedDate: '',
       type: 'all',
       customer: 'all',
       status: 'all',
@@ -168,6 +170,18 @@ export default function App() {
   // =========================================================================
   // DYNAMIC COMPUTED ENGINE: Reacts to Date, Customer, Type, Search, Status
   // =========================================================================
+
+  // Helper to normalize 'YYYY-MM-DD' or custom date string to 'DD Mon YYYY'
+  const formatDateToMon = (dateStr) => {
+    if (!dateStr) return '';
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      const [y, m, d] = dateStr.split('-');
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const mStr = months[parseInt(m, 10) - 1];
+      return `${d} ${mStr} ${y}`;
+    }
+    return dateStr;
+  };
 
   // 1. Filtered Deliveries
   const filteredDeliveries = useMemo(() => {
@@ -187,12 +201,18 @@ export default function App() {
       ) {
         return false;
       }
-      // Date Range filter
-      if (filters.dateRange === 'today') {
-        if (item.date !== '08 Sep 2026') return false;
-      }
-      if (filters.dateRange === 'yesterday') {
-        if (item.date !== '07 Sep 2026') return false;
+      // Custom Chosen Date Filter
+      if (filters.selectedDate) {
+        const targetDate = formatDateToMon(filters.selectedDate);
+        if (item.date !== targetDate) return false;
+      } else {
+        // Preset Date Range filter
+        if (filters.dateRange === 'today') {
+          if (item.date !== '08 Sep 2026') return false;
+        }
+        if (filters.dateRange === 'yesterday') {
+          if (item.date !== '07 Sep 2026') return false;
+        }
       }
       // Search keyword filter (ISBN, Title, Author, File, Customer, ID, Delivered By, Type)
       if (filters.search) {
@@ -237,6 +257,19 @@ export default function App() {
       .reduce((sum, item) => sum + (Number(item.qty) || Number(item.filesCount) || 1), 0);
   }, [deliveries, filters.customer, filters.type]);
 
+  // Dynamic calculation of items on chosen date (if chosen)
+  const selectedDateQty = useMemo(() => {
+    if (!filters.selectedDate) return null;
+    const targetDate = formatDateToMon(filters.selectedDate);
+    return deliveries
+      .filter((item) => {
+        if (filters.customer !== 'all' && item.customer !== filters.customer) return false;
+        if (filters.type !== 'all' && item.type !== filters.type) return false;
+        return item.date === targetDate;
+      })
+      .reduce((sum, item) => sum + (Number(item.qty) || Number(item.filesCount) || 1), 0);
+  }, [deliveries, filters.selectedDate, filters.customer, filters.type]);
+
   // 2. Dynamic KPI Cards
   const activeKpis = useMemo(() => {
     const custProfile = CUSTOMER_PROFILES[filters.customer];
@@ -268,9 +301,11 @@ export default function App() {
       month: baseMonth,
       total: baseTotal,
       pending: basePending,
-      successRate: baseSuccess
+      successRate: baseSuccess,
+      selectedDate: filters.selectedDate ? formatDateToMon(filters.selectedDate) : null,
+      selectedDateCount: selectedDateQty
     };
-  }, [filters.customer, filters.type, rawKpis, todayImportedQty]);
+  }, [filters.customer, filters.type, filters.selectedDate, rawKpis, todayImportedQty, selectedDateQty]);
 
   // 3. Dynamic Donut Breakdown
   const activeTypeBreakdown = useMemo(() => {

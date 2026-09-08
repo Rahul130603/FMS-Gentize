@@ -57,6 +57,153 @@ const CUSTOMER_PROFILES = {
   }
 };
 
+// Realistic Monthly & Weekly Baseline Data Profiles
+const MONTH_PROFILES = {
+  'Sep': {
+    name: 'September',
+    month: 1248,
+    week: 286,
+    pending: 37,
+    successRate: '98.4%',
+    breakdown: { POD: 420, EPDF: 356, 'SCANNED FILE': 298, 'E-ISBN': 174 },
+    weeks: { w1: 286, w2: 0, w3: 336, w4: 359, w5: 180 },
+    chart: {
+      pod: [18, 21, 16, 24, 19, 22, 20, 24],
+      epdf: [12, 15, 13, 18, 14, 16, 17, 19],
+      scanned: [8, 9, 11, 12, 10, 8, 11, 12],
+      eisbn: [5, 6, 4, 7, 5, 6, 5, 6],
+      labels: ['Sep 1', 'Sep 2', 'Sep 3', 'Sep 4', 'Sep 5', 'Sep 6', 'Sep 7', 'Sep 8']
+    }
+  },
+  'Aug': {
+    name: 'August',
+    month: 1296,
+    week: 324,
+    pending: 24,
+    successRate: '98.9%',
+    breakdown: { POD: 452, EPDF: 361, 'SCANNED FILE': 304, 'E-ISBN': 179 },
+    weeks: { w1: 312, w2: 326, w3: 334, w4: 324, w5: 0 },
+    chart: {
+      pod: [24, 28, 22, 26, 24, 29, 27],
+      epdf: [16, 19, 17, 21, 18, 20, 22],
+      scanned: [12, 14, 11, 13, 15, 12, 14],
+      eisbn: [8, 7, 9, 8, 6, 9, 8],
+      labels: ['Aug 1', 'Aug 5', 'Aug 10', 'Aug 15', 'Aug 20', 'Aug 25', 'Aug 31']
+    }
+  },
+  'Jul': {
+    name: 'July',
+    month: 1182,
+    week: 295,
+    pending: 29,
+    successRate: '98.1%',
+    breakdown: { POD: 398, EPDF: 337, 'SCANNED FILE': 286, 'E-ISBN': 161 },
+    weeks: { w1: 290, w2: 298, w3: 304, w4: 290, w5: 0 },
+    chart: {
+      pod: [20, 22, 19, 25, 21, 23, 22],
+      epdf: [14, 16, 15, 18, 15, 17, 16],
+      scanned: [10, 11, 9, 12, 11, 10, 11],
+      eisbn: [6, 5, 7, 6, 5, 7, 6],
+      labels: ['Jul 1', 'Jul 5', 'Jul 10', 'Jul 15', 'Jul 20', 'Jul 25', 'Jul 31']
+    }
+  },
+  'Jun': {
+    name: 'June',
+    month: 1162,
+    week: 290,
+    pending: 31,
+    successRate: '97.8%',
+    breakdown: { POD: 421, EPDF: 318, 'SCANNED FILE': 271, 'E-ISBN': 152 },
+    weeks: { w1: 282, w2: 289, w3: 295, w4: 296, w5: 0 },
+    chart: {
+      pod: [19, 23, 18, 24, 20, 22, 21],
+      epdf: [13, 15, 14, 17, 14, 16, 15],
+      scanned: [9, 10, 11, 12, 10, 9, 10],
+      eisbn: [5, 6, 5, 7, 5, 6, 5],
+      labels: ['Jun 1', 'Jun 5', 'Jun 10', 'Jun 15', 'Jun 20', 'Jun 25', 'Jun 30']
+    }
+  },
+  'May': {
+    name: 'May',
+    month: 1059,
+    week: 265,
+    pending: 35,
+    successRate: '98.2%',
+    breakdown: { POD: 384, EPDF: 291, 'SCANNED FILE': 246, 'E-ISBN': 138 },
+    weeks: { w1: 260, w2: 265, w3: 270, w4: 264, w5: 0 },
+    chart: {
+      pod: [17, 20, 16, 21, 18, 20, 19],
+      epdf: [11, 14, 12, 16, 13, 15, 14],
+      scanned: [8, 9, 10, 11, 9, 8, 9],
+      eisbn: [4, 5, 4, 6, 4, 5, 5],
+      labels: ['May 1', 'May 5', 'May 10', 'May 15', 'May 20', 'May 25', 'May 31']
+    }
+  },
+  'Apr': {
+    name: 'April',
+    month: 1140,
+    week: 285,
+    pending: 28,
+    successRate: '98.5%',
+    breakdown: { POD: 405, EPDF: 310, 'SCANNED FILE': 265, 'E-ISBN': 160 },
+    weeks: { w1: 275, w2: 285, w3: 290, w4: 290, w5: 0 }
+  },
+  'Mar': {
+    name: 'March',
+    month: 1110,
+    week: 278,
+    pending: 33,
+    successRate: '97.9%',
+    breakdown: { POD: 390, EPDF: 305, 'SCANNED FILE': 260, 'E-ISBN': 155 },
+    weeks: { w1: 270, w2: 275, w3: 280, w4: 285, w5: 0 }
+  },
+  'Feb': {
+    name: 'February',
+    month: 1020,
+    week: 255,
+    pending: 22,
+    successRate: '99.0%',
+    breakdown: { POD: 360, EPDF: 280, 'SCANNED FILE': 240, 'E-ISBN': 140 },
+    weeks: { w1: 250, w2: 255, w3: 255, w4: 260, w5: 0 }
+  },
+  'Jan': {
+    name: 'January',
+    month: 980,
+    week: 245,
+    pending: 26,
+    successRate: '98.3%',
+    breakdown: { POD: 345, EPDF: 270, 'SCANNED FILE': 230, 'E-ISBN': 135 },
+    weeks: { w1: 240, w2: 245, w3: 245, w4: 250, w5: 0 }
+  },
+  'Oct': {
+    name: 'October',
+    month: 1320,
+    week: 330,
+    pending: 30,
+    successRate: '98.7%',
+    breakdown: { POD: 460, EPDF: 370, 'SCANNED FILE': 310, 'E-ISBN': 180 },
+    weeks: { w1: 320, w2: 330, w3: 335, w4: 335, w5: 0 }
+  },
+  'Nov': {
+    name: 'November',
+    month: 1280,
+    week: 320,
+    pending: 32,
+    successRate: '98.4%',
+    breakdown: { POD: 445, EPDF: 360, 'SCANNED FILE': 300, 'E-ISBN': 175 },
+    weeks: { w1: 310, w2: 320, w3: 325, w4: 325, w5: 0 }
+  },
+  'Dec': {
+    name: 'December',
+    month: 1350,
+    week: 338,
+    pending: 34,
+    successRate: '98.8%',
+    breakdown: { POD: 470, EPDF: 380, 'SCANNED FILE': 320, 'E-ISBN': 180 },
+    weeks: { w1: 330, w2: 335, w3: 340, w4: 345, w5: 0 }
+  }
+};
+
 // Dedicated browser storage key for persistent delivery records
 const LOCAL_STORAGE_KEY = 'delivery_production_records_v2';
 
@@ -353,17 +500,38 @@ export default function App() {
       .reduce((sum, item) => sum + (Number(item.qty) || Number(item.filesCount) || 1), 0);
   }, [deliveries, filters.selectedDate, filters.customer, filters.type]);
 
-  // 2. Dynamic KPI Cards
+  // 2. Dynamic KPI Cards - Adapts to chosen Month & Week, and increments with user imports
   const activeKpis = useMemo(() => {
     const custProfile = CUSTOMER_PROFILES[filters.customer];
+    const monthProfile = MONTH_PROFILES[filters.selectedMonth] || MONTH_PROFILES['Sep'];
+    const isCurrentMonth = !filters.selectedMonth || filters.selectedMonth.toLowerCase() === 'sep';
 
-    // Today starts at 0, and updates with items imported/added today!
-    let baseToday = todayImportedQty;
-    let baseWeek = (custProfile ? custProfile.week : (rawKpis?.week ?? 286)) + todayImportedQty;
-    let baseMonth = (custProfile ? custProfile.month : (rawKpis?.month ?? 1248)) + todayImportedQty;
-    let baseTotal = (custProfile ? custProfile.total : (rawKpis?.total ?? 1864)) + todayImportedQty;
-    let basePending = custProfile ? custProfile.pending : (rawKpis?.pending ?? 37);
-    let baseSuccess = custProfile ? custProfile.successRate : (rawKpis?.successRate ?? '98.4%');
+    // Today count: only non-zero if viewing current month / today view
+    let baseToday = isCurrentMonth ? todayImportedQty : 0;
+
+    // Week count: reflects selected week or default week for that month
+    let baseWeek = monthProfile.week;
+    if (filters.selectedWeek) {
+      const wId = filters.selectedWeek.id;
+      if (wId === 'w2' && isCurrentMonth) {
+        baseWeek = todayImportedQty;
+      } else if (monthProfile.weeks && monthProfile.weeks[wId] !== undefined) {
+        baseWeek = monthProfile.weeks[wId];
+      }
+    } else if (isCurrentMonth) {
+      baseWeek = (custProfile ? custProfile.week : 286) + todayImportedQty;
+    }
+
+    // Month count: reflects chosen month total + user imported deliveries if September
+    let baseMonth = monthProfile.month + (isCurrentMonth ? todayImportedQty : 0);
+    if (custProfile && isCurrentMonth) {
+      baseMonth = custProfile.month + todayImportedQty;
+    }
+
+    // Total production
+    let baseTotal = (custProfile ? custProfile.total : (rawKpis?.total ?? 1864)) + (isCurrentMonth ? todayImportedQty : 0);
+    let basePending = custProfile ? custProfile.pending : monthProfile.pending;
+    let baseSuccess = custProfile ? custProfile.successRate : monthProfile.successRate;
 
     // Type scale factor
     if (filters.type !== 'all') {
@@ -386,12 +554,13 @@ export default function App() {
       pending: basePending,
       successRate: baseSuccess
     };
-  }, [filters.customer, filters.type, rawKpis, todayImportedQty]);
+  }, [filters.customer, filters.type, filters.selectedMonth, filters.selectedWeek, rawKpis, todayImportedQty]);
 
-  // 3. Dynamic Donut Breakdown
+  // 3. Dynamic Donut Breakdown - Adapts to chosen Month
   const activeTypeBreakdown = useMemo(() => {
     const custProfile = CUSTOMER_PROFILES[filters.customer];
-    let breakdown = custProfile ? { ...custProfile.breakdown } : (rawKpis?.typeBreakdown || { POD: 420, EPDF: 356, 'SCANNED FILE': 298, 'E-ISBN': 174 });
+    const monthProfile = MONTH_PROFILES[filters.selectedMonth] || MONTH_PROFILES['Sep'];
+    let breakdown = custProfile ? { ...custProfile.breakdown } : { ...monthProfile.breakdown };
 
     if (filters.type !== 'all') {
       const val = breakdown[filters.type] || 100;
@@ -406,18 +575,21 @@ export default function App() {
     return breakdown;
   }, [filters, rawKpis]);
 
-  // 4. Dynamic Combo Chart
+  // 4. Dynamic Combo Chart - Adapts labels & data to chosen Month/Week
   const activeAnalyticsData = useMemo(() => {
     if (!rawAnalyticsData) return null;
 
     const custProfile = CUSTOMER_PROFILES[filters.customer];
+    const monthProfile = MONTH_PROFILES[filters.selectedMonth] || MONTH_PROFILES['Sep'];
     const factor = custProfile ? custProfile.factor : 1.0;
     const scaleArr = (arr) => (arr || []).map((v) => Math.max(0, Math.round(v * factor)));
 
-    let pod = scaleArr(rawAnalyticsData.pod);
-    let epdf = scaleArr(rawAnalyticsData.epdf);
-    let scanned = scaleArr(rawAnalyticsData.scanned);
-    let eisbn = scaleArr(rawAnalyticsData.eisbn);
+    let sourceChart = monthProfile.chart || rawAnalyticsData;
+    let pod = scaleArr(sourceChart.pod || rawAnalyticsData.pod);
+    let epdf = scaleArr(sourceChart.epdf || rawAnalyticsData.epdf);
+    let scanned = scaleArr(sourceChart.scanned || rawAnalyticsData.scanned);
+    let eisbn = scaleArr(sourceChart.eisbn || rawAnalyticsData.eisbn);
+    let labels = sourceChart.labels || rawAnalyticsData.labels || [];
 
     if (filters.type === 'POD') {
       epdf = epdf.map(() => 0);
@@ -440,7 +612,7 @@ export default function App() {
     const total = pod.map((p, i) => p + (epdf[i] || 0) + (scanned[i] || 0) + (eisbn[i] || 0));
 
     return {
-      labels: rawAnalyticsData.labels || [],
+      labels,
       pod,
       epdf,
       scanned,

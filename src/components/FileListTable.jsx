@@ -442,14 +442,6 @@ export default function FileListTable({
         <table className="w-full text-left text-xs">
           <thead className="bg-slate-50/80 text-slate-500 font-semibold border-b border-slate-100 text-[11px]">
             <tr>
-              <th className="py-2.5 px-3 w-8 text-center">
-                <input
-                  type="checkbox"
-                  checked={selectAll}
-                  onChange={handleToggleSelectAll}
-                  className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                />
-              </th>
               <th className="py-2.5 px-3 font-bold whitespace-nowrap">ISBN</th>
               <th className="py-2.5 px-3 font-bold">Book Title / Author</th>
               <th className="py-2.5 px-3 font-bold">Customer</th>
@@ -464,7 +456,7 @@ export default function FileListTable({
           <tbody className="divide-y divide-slate-100">
             {pageItems.length === 0 ? (
               <tr>
-                <td colSpan={10} className="text-center py-6 text-slate-400">
+                <td colSpan={9} className="text-center py-6 text-slate-400">
                   No matching delivery files found for the active filter.
                 </td>
               </tr>
@@ -479,14 +471,6 @@ export default function FileListTable({
 
                 return (
                   <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
-                    <td className="py-2.5 px-3 text-center">
-                      <input
-                        type="checkbox"
-                        checked={!!selectedRows[item.id]}
-                        onChange={() => handleToggleRow(item.id)}
-                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer row-checkbox"
-                      />
-                    </td>
                     <td className="py-2.5 px-3 font-mono text-[11px] text-blue-700 font-semibold whitespace-nowrap">
                       {isbn}
                     </td>

@@ -279,9 +279,10 @@ export default function App() {
         // Preset Date Range filter
         if (filters.dateRange === 'today') {
           if (!isTodayDate(item.date)) return false;
-        }
-        if (filters.dateRange === 'yesterday') {
+        } else if (filters.dateRange === 'yesterday') {
           if (item.date !== '07 Sep 2026') return false;
+        } else if (filters.dateRange === 'month') {
+          if (!item.date || !item.date.includes('Sep')) return false;
         }
       }
       // Search keyword filter (ISBN, Title, Author, File, Customer, ID, Delivered By, Type)
@@ -518,6 +519,49 @@ export default function App() {
     }
   };
 
+  // Quick KPI Card Interactive Filter Handler
+  const handleKpiCardClick = (type, value) => {
+    if (type === 'dateRange') {
+      if (filters.dateRange === value && !filters.selectedDate) {
+        setFilters((prev) => ({ ...prev, dateRange: 'all', selectedDate: '' }));
+        showToast('Viewing All Deliveries');
+      } else {
+        setFilters((prev) => ({ ...prev, dateRange: value, selectedDate: '' }));
+        const label =
+          value === 'today'
+            ? `Today's Deliveries (${activeKpis.today})`
+            : value === 'week'
+            ? `This Week's Deliveries (${activeKpis.week})`
+            : `This Month's Deliveries (${activeKpis.month})`;
+        showToast(`📅 Filtered: ${label}`);
+      }
+    } else if (type === 'status') {
+      if (filters.status === value) {
+        setFilters((prev) => ({ ...prev, status: 'all' }));
+        showToast('Status filter cleared (All Statuses)');
+      } else {
+        setFilters((prev) => ({ ...prev, status: value }));
+        showToast(`Filtered Status: ${value.toUpperCase()}`);
+      }
+    } else if (type === 'all') {
+      setFilters((prev) => ({
+        ...prev,
+        dateRange: 'all',
+        selectedDate: '',
+        status: 'all',
+        type: 'all',
+        customer: 'all'
+      }));
+      showToast('Showing All Production Records');
+    }
+  };
+
+  const handleKpiCustomDate = (dateVal) => {
+    if (!dateVal) return;
+    setFilters((prev) => ({ ...prev, selectedDate: dateVal, dateRange: 'custom' }));
+    showToast(`📅 Filtered Date: ${formatDateToMon(dateVal)}`);
+  };
+
   // Header Refresh Action
   const handleRefresh = () => {
     showToast('Syncing delivery production metrics...');
@@ -609,8 +653,15 @@ export default function App() {
           setQuickDateScope={setQuickDateScope}
         />
 
-        {/* 3. SUMMARY KPI CARDS (6 CARDS) - Fully Reactive */}
-        <KpiCards kpis={activeKpis} />
+        {/* 3. SUMMARY KPI CARDS (6 CARDS) - Fully Reactive Interactive Filter Buttons */}
+        <KpiCards
+          kpis={activeKpis}
+          activeDateRange={filters.dateRange}
+          selectedDate={filters.selectedDate}
+          activeStatus={filters.status}
+          onSelectFilter={handleKpiCardClick}
+          onSelectCustomDate={handleKpiCustomDate}
+        />
 
         {/* 4. ROW 1: 3 PRODUCTION ANALYTICS CHARTS - Fully Reactive */}
         <section className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
@@ -650,7 +701,7 @@ export default function App() {
           </div>
 
           {/* Recent Delivery Activity (8 cols) - With ISBN, Title, Author, Delivered By (QC/QAG/TL/MANAGER) */}
-          <div className="lg:col-span-8">
+          <div className="lg:col-span-8" id="recent-activity-section">
             <RecentActivityTable
               activities={filteredDeliveries}
               onViewDetails={(item) => setSelectedDelivery(item)}

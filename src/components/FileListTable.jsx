@@ -1,19 +1,30 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Search, Eye, Download, FileText, ChevronLeft, ChevronRight, ChevronDown, Check, Calendar } from 'lucide-react';
 
 export default function FileListTable({
   deliveries = [],
-  filters,
-  onFilterChange,
   onSelectDelivery,
   showToast
 }) {
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectAll, setSelectAll] = useState(false);
-  const [selectedRows, setSelectedRows] = useState({});
   const [activeDropdown, setActiveDropdown] = useState(null);
   const tableFilterRef = useRef(null);
   const pageSize = 5;
+
+  // Dedicated LOCAL, ISOLATED filter state for this table ONLY
+  const [tableFilters, setTableFilters] = useState({
+    search: '',
+    type: 'all',
+    customer: 'all',
+    selectedDate: '',
+    status: 'all',
+    sort: 'latest'
+  });
+
+  const handleTableFilterChange = (key, value) => {
+    setTableFilters((prev) => ({ ...prev, [key]: value }));
+    setCurrentPage(1);
+  };
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -47,43 +58,86 @@ export default function FileListTable({
     }
   };
 
+  const formatDateToMon = (dateStr) => {
+    if (!dateStr) return '';
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      const [y, m, d] = dateStr.split('-');
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const mStr = months[parseInt(m, 10) - 1];
+      return `${d} ${mStr} ${y}`;
+    }
+    return dateStr;
+  };
+
+  // Local Table Filter logic - completely independent of global dashboard
+  const filteredTableItems = useMemo(() => {
+    return deliveries.filter((item) => {
+      // Type
+      if (tableFilters.type !== 'all' && item.type !== tableFilters.type) return false;
+      // Customer
+      if (tableFilters.customer !== 'all' && item.customer !== tableFilters.customer) return false;
+      // Status
+      if (
+        tableFilters.status !== 'all' &&
+        item.status.toLowerCase() !== tableFilters.status.toLowerCase()
+      ) {
+        return false;
+      }
+      // Date Filter
+      if (tableFilters.selectedDate) {
+        const target = formatDateToMon(tableFilters.selectedDate);
+        if (item.date !== target) return false;
+      }
+      // Search
+      if (tableFilters.search) {
+        const q = tableFilters.search.toLowerCase().trim();
+        const file = (item.file || (item.files && item.files[0]?.name) || '').toLowerCase();
+        const cust = (item.customer || '').toLowerCase();
+        const id = (item.id || '').toLowerCase();
+        const type = (item.type || '').toLowerCase();
+        const isbn = (item.isbn || '').toLowerCase();
+        const title = (item.title || '').toLowerCase();
+        const author = (item.author || '').toLowerCase();
+        const role = (item.deliveredBy || '').toLowerCase();
+
+        if (
+          !file.includes(q) &&
+          !cust.includes(q) &&
+          !id.includes(q) &&
+          !type.includes(q) &&
+          !isbn.includes(q) &&
+          !title.includes(q) &&
+          !author.includes(q) &&
+          !role.includes(q)
+        ) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [deliveries, tableFilters]);
+
   // Sort list
-  const sorted = [...deliveries];
-  const sortVal = filters?.sort || 'latest';
-  if (sortVal === 'latest') {
-    sorted.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-  } else if (sortVal === 'oldest') {
-    sorted.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
-  } else if (sortVal === 'qty-desc') {
-    sorted.sort((a, b) => (b.qty || b.filesCount || 0) - (a.qty || a.filesCount || 0));
-  } else if (sortVal === 'qty-asc') {
-    sorted.sort((a, b) => (a.qty || a.filesCount || 0) - (b.qty || b.filesCount || 0));
-  }
+  const sorted = useMemo(() => {
+    const list = [...filteredTableItems];
+    const sortVal = tableFilters.sort || 'latest';
+    if (sortVal === 'latest') {
+      list.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+    } else if (sortVal === 'oldest') {
+      list.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+    } else if (sortVal === 'qty-desc') {
+      list.sort((a, b) => (b.qty || b.filesCount || 0) - (a.qty || a.filesCount || 0));
+    } else if (sortVal === 'qty-asc') {
+      list.sort((a, b) => (a.qty || a.filesCount || 0) - (b.qty || b.filesCount || 0));
+    }
+    return list;
+  }, [filteredTableItems, tableFilters.sort]);
 
   const totalCount = sorted.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const activePage = Math.min(currentPage, totalPages);
   const startIndex = (activePage - 1) * pageSize;
   const pageItems = sorted.slice(startIndex, startIndex + pageSize);
-
-  const handleToggleSelectAll = (e) => {
-    const checked = e.target.checked;
-    setSelectAll(checked);
-    const newSelected = {};
-    if (checked) {
-      pageItems.forEach((item) => {
-        newSelected[item.id] = true;
-      });
-    }
-    setSelectedRows(newSelected);
-  };
-
-  const handleToggleRow = (id) => {
-    setSelectedRows((prev) => ({
-      ...prev,
-      [id]: !prev[id]
-    }));
-  };
 
   const handleDownload = (fileName) => {
     if (showToast) {
@@ -112,11 +166,8 @@ export default function FileListTable({
             <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             <input
               type="text"
-              value={filters?.search || ''}
-              onChange={(e) => {
-                onFilterChange('search', e.target.value);
-                setCurrentPage(1);
-              }}
+              value={tableFilters.search}
+              onChange={(e) => handleTableFilterChange('search', e.target.value)}
               placeholder="Search ISBN, title, author..."
               className="text-xs rounded-lg border border-slate-200 pl-8 pr-2 py-1.5 text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-hidden font-medium bg-white hover:border-slate-300 w-52 shadow-2xs"
             />
@@ -128,12 +179,12 @@ export default function FileListTable({
               type="button"
               onClick={() => setActiveDropdown(activeDropdown === 'type' ? null : 'type')}
               className={`text-xs rounded-lg border px-2.5 py-1.5 font-medium outline-hidden cursor-pointer flex items-center space-x-1.5 shadow-2xs transition-all ${
-                filters?.type !== 'all' || activeDropdown === 'type'
+                tableFilters.type !== 'all' || activeDropdown === 'type'
                   ? 'border-blue-300 bg-blue-50/70 text-blue-700 font-semibold'
                   : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
               }`}
             >
-              <span>{filters?.type === 'all' ? 'Type: All' : filters?.type}</span>
+              <span>{tableFilters.type === 'all' ? 'Type: All' : tableFilters.type}</span>
               <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${activeDropdown === 'type' ? 'rotate-180 text-blue-600' : ''}`} />
             </button>
             {activeDropdown === 'type' && (
@@ -148,18 +199,17 @@ export default function FileListTable({
                   <div
                     key={opt.id}
                     onClick={() => {
-                      onFilterChange('type', opt.id);
-                      setCurrentPage(1);
+                      handleTableFilterChange('type', opt.id);
                       setActiveDropdown(null);
                     }}
                     className={`px-3 py-1.5 text-xs font-medium cursor-pointer transition-colors flex items-center justify-between ${
-                      (filters?.type || 'all') === opt.id
+                      tableFilters.type === opt.id
                         ? 'bg-blue-50 text-blue-700 font-bold'
                         : 'text-slate-700 hover:bg-slate-50'
                     }`}
                   >
                     <span>{opt.label}</span>
-                    {(filters?.type || 'all') === opt.id && <Check className="w-3.5 h-3.5 text-blue-600" />}
+                    {tableFilters.type === opt.id && <Check className="w-3.5 h-3.5 text-blue-600" />}
                   </div>
                 ))}
               </div>
@@ -172,13 +222,13 @@ export default function FileListTable({
               type="button"
               onClick={() => setActiveDropdown(activeDropdown === 'customer' ? null : 'customer')}
               className={`text-xs rounded-lg border px-2.5 py-1.5 font-medium outline-hidden cursor-pointer flex items-center space-x-1.5 shadow-2xs transition-all ${
-                filters?.customer !== 'all' || activeDropdown === 'customer'
+                tableFilters.customer !== 'all' || activeDropdown === 'customer'
                   ? 'border-blue-300 bg-blue-50/70 text-blue-700 font-semibold'
                   : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
               }`}
             >
               <span className="truncate max-w-[130px]">
-                {filters?.customer === 'all' ? 'Customer: All' : filters?.customer}
+                {tableFilters.customer === 'all' ? 'Customer: All' : tableFilters.customer}
               </span>
               <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${activeDropdown === 'customer' ? 'rotate-180 text-blue-600' : ''}`} />
             </button>
@@ -196,18 +246,17 @@ export default function FileListTable({
                   <div
                     key={cust}
                     onClick={() => {
-                      onFilterChange('customer', cust);
-                      setCurrentPage(1);
+                      handleTableFilterChange('customer', cust);
                       setActiveDropdown(null);
                     }}
                     className={`px-3 py-1.5 text-xs font-medium cursor-pointer transition-colors flex items-center justify-between ${
-                      (filters?.customer || 'all') === cust
+                      tableFilters.customer === cust
                         ? 'bg-blue-50 text-blue-700 font-bold'
                         : 'text-slate-700 hover:bg-slate-50'
                     }`}
                   >
                     <span>{cust === 'all' ? 'Customer: All' : cust}</span>
-                    {(filters?.customer || 'all') === cust && <Check className="w-3.5 h-3.5 text-blue-600" />}
+                    {tableFilters.customer === cust && <Check className="w-3.5 h-3.5 text-blue-600" />}
                   </div>
                 ))}
               </div>
@@ -220,14 +269,14 @@ export default function FileListTable({
               type="button"
               onClick={() => setActiveDropdown(activeDropdown === 'date' ? null : 'date')}
               className={`text-xs rounded-lg border px-2.5 py-1.5 font-medium outline-hidden cursor-pointer flex items-center space-x-1.5 shadow-2xs transition-all ${
-                filters?.selectedDate || activeDropdown === 'date'
+                tableFilters.selectedDate || activeDropdown === 'date'
                   ? 'border-blue-400 bg-blue-50 text-blue-700 font-bold shadow-xs'
                   : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
               }`}
               title="Filter deliveries by choosing any date"
             >
               <Calendar className="w-3.5 h-3.5 text-blue-600" />
-              <span>{filters?.selectedDate ? filters.selectedDate : 'Date: All'}</span>
+              <span>{tableFilters.selectedDate ? tableFilters.selectedDate : 'Date: All'}</span>
               <ChevronDown
                 className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
                   activeDropdown === 'date' ? 'rotate-180 text-blue-600' : ''
@@ -240,12 +289,11 @@ export default function FileListTable({
                   <span className="text-2xs font-bold text-slate-800 uppercase tracking-wider">
                     Select Delivery Date
                   </span>
-                  {filters?.selectedDate && (
+                  {tableFilters.selectedDate && (
                     <button
                       type="button"
                       onClick={() => {
-                        onFilterChange('selectedDate', '');
-                        setCurrentPage(1);
+                        handleTableFilterChange('selectedDate', '');
                         setActiveDropdown(null);
                       }}
                       className="text-[10px] font-bold text-rose-600 hover:underline cursor-pointer"
@@ -264,8 +312,7 @@ export default function FileListTable({
                     type="date"
                     onChange={(e) => {
                       if (e.target.value) {
-                        onFilterChange('selectedDate', e.target.value);
-                        setCurrentPage(1);
+                        handleTableFilterChange('selectedDate', e.target.value);
                         setActiveDropdown(null);
                       }
                     }}
@@ -294,18 +341,17 @@ export default function FileListTable({
                         key={d.date}
                         type="button"
                         onClick={() => {
-                          onFilterChange('selectedDate', d.date);
-                          setCurrentPage(1);
+                          handleTableFilterChange('selectedDate', d.date);
                           setActiveDropdown(null);
                         }}
                         className={`w-full text-left px-2.5 py-1 rounded-lg text-xs transition-colors flex items-center justify-between cursor-pointer ${
-                          (filters?.selectedDate || '') === d.date
+                          tableFilters.selectedDate === d.date
                             ? 'bg-blue-600 text-white font-bold'
                             : 'text-slate-700 hover:bg-slate-100 font-medium'
                         }`}
                       >
                         <span>{d.label}</span>
-                        {(filters?.selectedDate || '') === d.date && (
+                        {tableFilters.selectedDate === d.date && (
                           <Check className="w-3 h-3 text-white" />
                         )}
                       </button>
@@ -322,12 +368,12 @@ export default function FileListTable({
               type="button"
               onClick={() => setActiveDropdown(activeDropdown === 'status' ? null : 'status')}
               className={`text-xs rounded-lg border px-2.5 py-1.5 font-medium outline-hidden cursor-pointer flex items-center space-x-1.5 shadow-2xs transition-all ${
-                filters?.status !== 'all' || activeDropdown === 'status'
+                tableFilters.status !== 'all' || activeDropdown === 'status'
                   ? 'border-blue-300 bg-blue-50/70 text-blue-700 font-semibold'
                   : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
               }`}
             >
-              <span>{filters?.status === 'all' ? 'Status: All' : filters?.status}</span>
+              <span>{tableFilters.status === 'all' ? 'Status: All' : tableFilters.status}</span>
               <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${activeDropdown === 'status' ? 'rotate-180 text-blue-600' : ''}`} />
             </button>
             {activeDropdown === 'status' && (
@@ -342,18 +388,17 @@ export default function FileListTable({
                   <div
                     key={st.id}
                     onClick={() => {
-                      onFilterChange('status', st.id);
-                      setCurrentPage(1);
+                      handleTableFilterChange('status', st.id);
                       setActiveDropdown(null);
                     }}
                     className={`px-3 py-1.5 text-xs font-medium cursor-pointer transition-colors flex items-center justify-between ${
-                      (filters?.status || 'all') === st.id
+                      tableFilters.status === st.id
                         ? 'bg-blue-50 text-blue-700 font-bold'
                         : 'text-slate-700 hover:bg-slate-50'
                     }`}
                   >
                     <span>{st.label}</span>
-                    {(filters?.status || 'all') === st.id && <Check className="w-3.5 h-3.5 text-blue-600" />}
+                    {tableFilters.status === st.id && <Check className="w-3.5 h-3.5 text-blue-600" />}
                   </div>
                 ))}
               </div>
@@ -372,11 +417,11 @@ export default function FileListTable({
               }`}
             >
               <span>
-                {filters?.sort === 'oldest'
+                {tableFilters.sort === 'oldest'
                   ? 'Oldest Delivery'
-                  : filters?.sort === 'qty-desc'
+                  : tableFilters.sort === 'qty-desc'
                   ? 'Qty: High to Low'
-                  : filters?.sort === 'qty-asc'
+                  : tableFilters.sort === 'qty-asc'
                   ? 'Qty: Low to High'
                   : 'Latest Delivery'}
               </span>
@@ -393,18 +438,17 @@ export default function FileListTable({
                   <div
                     key={s.id}
                     onClick={() => {
-                      onFilterChange('sort', s.id);
-                      setCurrentPage(1);
+                      handleTableFilterChange('sort', s.id);
                       setActiveDropdown(null);
                     }}
                     className={`px-3 py-1.5 text-xs font-medium cursor-pointer transition-colors flex items-center justify-between ${
-                      (filters?.sort || 'latest') === s.id
+                      tableFilters.sort === s.id
                         ? 'bg-blue-50 text-blue-700 font-bold'
                         : 'text-slate-700 hover:bg-slate-50'
                     }`}
                   >
                     <span>{s.label}</span>
-                    {(filters?.sort || 'latest') === s.id && <Check className="w-3.5 h-3.5 text-blue-600" />}
+                    {tableFilters.sort === s.id && <Check className="w-3.5 h-3.5 text-blue-600" />}
                   </div>
                 ))}
               </div>
@@ -413,15 +457,15 @@ export default function FileListTable({
         </div>
       </div>
 
-      {/* Chosen Date Filter Banner */}
-      {filters?.selectedDate && (
+      {/* Chosen Date Filter Banner (for this table only) */}
+      {tableFilters.selectedDate && (
         <div className="flex items-center justify-between px-3.5 py-2 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-950 font-medium animate-in fade-in duration-150">
           <div className="flex items-center space-x-2">
             <div className="w-5 h-5 rounded-md bg-blue-600 text-white flex items-center justify-center">
               <Calendar className="w-3 h-3" />
             </div>
             <span>
-              Showing deliveries on chosen date: <strong className="font-extrabold text-blue-700">{filters.selectedDate}</strong>
+              Showing deliveries on chosen date: <strong className="font-extrabold text-blue-700">{tableFilters.selectedDate}</strong>
             </span>
             <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 text-[10px] font-extrabold">
               {totalCount} Deliveries Found
@@ -429,7 +473,7 @@ export default function FileListTable({
           </div>
           <button
             type="button"
-            onClick={() => onFilterChange('selectedDate', '')}
+            onClick={() => handleTableFilterChange('selectedDate', '')}
             className="text-xs font-bold text-blue-700 hover:text-rose-600 hover:underline cursor-pointer transition-colors"
           >
             Show All Dates (Clear)
@@ -478,64 +522,62 @@ export default function FileListTable({
                       <div className="font-semibold text-slate-900 truncate" title={title}>
                         {title}
                       </div>
-                      <div className="text-[10px] text-slate-400 truncate">{author}</div>
+                      <div className="text-[10px] text-slate-500 font-normal truncate" title={author}>
+                        {author}
+                      </div>
                     </td>
-                    <td className="py-2.5 px-3 font-medium text-slate-700 whitespace-nowrap">{item.customer}</td>
+                    <td className="py-2.5 px-3 font-medium text-slate-700 whitespace-nowrap">
+                      {item.customer}
+                    </td>
                     <td className="py-2.5 px-3 text-center whitespace-nowrap">
-                      <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-bold ${getTypeBadgeClass(
-                          item.type
-                        )}`}
-                      >
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${getTypeBadgeClass(item.type)}`}>
                         {item.type}
                       </span>
                     </td>
-                    <td className="py-2.5 px-3 font-black text-slate-800 text-right">
+                    <td className="py-2.5 px-3 font-bold text-slate-800 text-right whitespace-nowrap">
                       {item.qty || item.filesCount || 1}
                     </td>
                     <td className="py-2.5 px-3 text-slate-600 whitespace-nowrap text-[11px]">
-                      {item.date} <span className="text-slate-400 font-normal ml-1">{item.time}</span>
+                      <div>{item.date}</div>
+                      <div className="text-[10px] text-slate-400">{item.time}</div>
                     </td>
                     <td className="py-2.5 px-3 text-center whitespace-nowrap">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${getRoleBadgeClass(role)}`}>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${getRoleBadgeClass(role)}`}>
                         {role}
                       </span>
                     </td>
                     <td className="py-2.5 px-3 text-center whitespace-nowrap">
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                          item.status === 'Delivered'
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            : 'bg-amber-50 text-amber-700 border border-amber-200'
-                        }`}
-                      >
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
                         {item.status}
                       </span>
                     </td>
                     <td className="py-2.5 px-3 text-center whitespace-nowrap">
-                      <div className="inline-flex items-center space-x-1">
+                      <div className="flex items-center justify-center space-x-1.5">
                         <button
+                          type="button"
                           onClick={() => onSelectDelivery(item)}
-                          className="px-2 py-1 bg-white border border-slate-200 hover:border-slate-300 rounded text-slate-600 hover:text-blue-600 text-2xs font-semibold shadow-2xs flex items-center space-x-1 cursor-pointer"
-                          title="View details"
+                          className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-[10px] font-bold flex items-center space-x-1 transition-colors cursor-pointer"
+                          title="Quick View"
                         >
-                          <Eye className="w-3 h-3" />
+                          <Eye className="w-3 h-3 text-slate-600" />
                           <span>View</span>
                         </button>
                         <button
+                          type="button"
                           onClick={() => handleDownload(fileName)}
-                          className="px-2 py-1 bg-white border border-slate-200 hover:border-slate-300 rounded text-slate-600 hover:text-blue-600 text-2xs font-semibold shadow-2xs flex items-center space-x-1 cursor-pointer"
-                          title="Download"
+                          className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-[10px] font-bold flex items-center space-x-1 transition-colors cursor-pointer"
+                          title="Download File"
                         >
-                          <Download className="w-3 h-3" />
+                          <Download className="w-3 h-3 text-slate-600" />
                           <span>Download</span>
                         </button>
                         <button
+                          type="button"
                           onClick={() => onSelectDelivery(item)}
-                          className="px-2 py-1 bg-white border border-slate-200 hover:border-slate-300 rounded text-slate-600 hover:text-blue-600 text-2xs font-semibold shadow-2xs flex items-center space-x-1 cursor-pointer"
-                          title="Details"
+                          className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-[10px] font-bold flex items-center space-x-1 transition-colors cursor-pointer"
+                          title="View Details"
                         >
-                          <FileText className="w-3 h-3" />
+                          <FileText className="w-3 h-3 text-slate-600" />
                           <span>Details</span>
                         </button>
                       </div>
@@ -549,63 +591,48 @@ export default function FileListTable({
       </div>
 
       {/* Pagination Footer */}
-      <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-[11px] text-slate-500">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-slate-100 text-2xs text-slate-500">
         <div>
-          {totalCount === 0
-            ? 'Showing 0 entries'
-            : `Showing ${startIndex + 1} to ${Math.min(
-                startIndex + pageSize,
-                totalCount
-              )} of ${totalCount} entries`}
+          Showing {totalCount === 0 ? 0 : startIndex + 1} to {Math.min(startIndex + pageSize, totalCount)} of {totalCount} entries
         </div>
-
-        <div className="flex items-center space-x-1">
-          <button
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            disabled={activePage <= 1}
-            className="p-1.5 rounded border border-slate-200 hover:bg-slate-50 text-slate-600 hover:text-blue-600 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <ChevronLeft className="w-3 h-3" />
-          </button>
-
-          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => i + 1).map((page) => (
+        {totalPages > 1 && (
+          <div className="flex items-center space-x-1">
             <button
-              key={page}
-              onClick={() => setCurrentPage(page)}
-              className={`px-2.5 py-1 rounded text-2xs font-bold cursor-pointer ${
-                activePage === page
-                  ? 'bg-blue-600 text-white'
-                  : 'border border-slate-200 hover:bg-slate-50 text-slate-600'
-              }`}
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={activePage === 1}
+              className="p-1 rounded border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
             >
-              {page}
+              <ChevronLeft className="w-3.5 h-3.5" />
             </button>
-          ))}
-
-          {totalPages > 5 && (
-            <>
-              <span className="px-1 text-slate-400">..</span>
-              <button
-                onClick={() => setCurrentPage(totalPages)}
-                className={`px-2.5 py-1 rounded text-2xs font-bold cursor-pointer ${
-                  activePage === totalPages
-                    ? 'bg-blue-600 text-white'
-                    : 'border border-slate-200 hover:bg-slate-50 text-slate-600'
-                }`}
-              >
-                {totalPages}
-              </button>
-            </>
-          )}
-
-          <button
-            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-            disabled={activePage >= totalPages}
-            className="p-1.5 rounded border border-slate-200 hover:bg-slate-50 text-slate-600 hover:text-blue-600 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <ChevronRight className="w-3 h-3" />
-          </button>
-        </div>
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter((p) => p === 1 || p === totalPages || Math.abs(p - activePage) <= 1)
+              .map((p, idx, arr) => {
+                const prev = arr[idx - 1];
+                return (
+                  <React.Fragment key={p}>
+                    {prev && p - prev > 1 && <span className="px-1 text-slate-400">..</span>}
+                    <button
+                      onClick={() => setCurrentPage(p)}
+                      className={`px-2 py-0.5 rounded border text-xs font-bold cursor-pointer transition-all ${
+                        activePage === p
+                          ? 'bg-blue-600 border-blue-600 text-white shadow-2xs'
+                          : 'border-slate-200 hover:bg-slate-50 text-slate-700'
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  </React.Fragment>
+                );
+              })}
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={activePage === totalPages}
+              className="p-1 rounded border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+            >
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
       </div>
     </section>
   );

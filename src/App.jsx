@@ -301,11 +301,9 @@ export default function App() {
       month: baseMonth,
       total: baseTotal,
       pending: basePending,
-      successRate: baseSuccess,
-      selectedDate: filters.selectedDate ? formatDateToMon(filters.selectedDate) : null,
-      selectedDateCount: selectedDateQty
+      successRate: baseSuccess
     };
-  }, [filters.customer, filters.type, filters.selectedDate, rawKpis, todayImportedQty, selectedDateQty]);
+  }, [filters.customer, filters.type, rawKpis, todayImportedQty]);
 
   // 3. Dynamic Donut Breakdown
   const activeTypeBreakdown = useMemo(() => {
@@ -571,11 +569,9 @@ export default function App() {
           </div>
         </section>
 
-        {/* 6. ROW 3: FULL DELIVERY FILE LIST - Fully Reactive */}
+        {/* 6. ROW 3: FULL DELIVERY FILE LIST - Independent Local Table Filters */}
         <FileListTable
-          deliveries={filteredDeliveries}
-          filters={filters}
-          onFilterChange={handleFilterChange}
+          deliveries={deliveries}
           onSelectDelivery={(item) => setSelectedDelivery(item)}
           showToast={showToast}
         />

@@ -45,14 +45,18 @@ export async function createBulkDeliveries(deliveries) {
   return res.json();
 }
 
-export async function updateDeliveryStatus(id, status) {
-  const res = await fetch(`${API_BASE}/deliveries/${id}/status`, {
-    method: 'PUT',
+export async function updateDelivery(id, updates) {
+  const res = await fetch(`${API_BASE}/deliveries/${id}`, {
+    method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ status }),
+    body: JSON.stringify(updates),
   });
-  if (!res.ok) throw new Error(`Failed to update status: ${res.statusText}`);
+  if (!res.ok) throw new Error(`Failed to update delivery: ${res.statusText}`);
   return res.json();
+}
+
+export async function updateDeliveryStatus(id, status) {
+  return updateDelivery(id, { status });
 }
 
 export async function deleteDelivery(id) {

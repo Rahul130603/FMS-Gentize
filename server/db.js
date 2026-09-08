@@ -55,10 +55,10 @@ export const db = {
       );
     }
 
-    if (sort === 'latest') {
-      list.sort((a, b) => b.timestamp - a.timestamp);
+    if (!sort || sort === 'latest') {
+      list.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
     } else if (sort === 'oldest') {
-      list.sort((a, b) => a.timestamp - b.timestamp);
+      list.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
     } else if (sort === 'qty-desc') {
       list.sort((a, b) => b.qty - a.qty);
     } else if (sort === 'qty-asc') {
@@ -119,7 +119,10 @@ export const db = {
     let totalAddedQty = 0;
 
     records.forEach((item, idx) => {
-      const id = item.id || `DEL-${String(baseTime + idx).slice(-5)}`;
+      let id = item.id;
+      if (!id || (data.deliveries || []).some(d => d.id === id)) {
+        id = `DEL-${String(baseTime + idx).slice(-5)}`;
+      }
       const qty = Number(item.qty) || 1;
       const record = {
         id,
@@ -156,13 +159,17 @@ export const db = {
     return createdRecords;
   },
 
-  updateDeliveryStatus: (id, status) => {
+  updateDelivery: (id, fields = {}) => {
     const data = readData();
     const index = data.deliveries.findIndex(d => d.id === id);
     if (index === -1) return null;
-    data.deliveries[index].status = status;
+    data.deliveries[index] = { ...data.deliveries[index], ...fields };
     writeData(data);
     return data.deliveries[index];
+  },
+
+  updateDeliveryStatus: (id, status) => {
+    return db.updateDelivery(id, { status });
   },
 
   deleteDelivery: (id) => {

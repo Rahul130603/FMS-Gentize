@@ -5,9 +5,9 @@
   "description": "DELIVERY PRODUCTION COUNT - Full-Stack React + Vite + Node.js Application",
   "type": "module",
   "scripts": {
-    "dev": "concurrently \"node server/server.js\" \"vite\"",
+    "dev": "concurrently \"node --watch-path=server --watch server/server.js\" \"vite\"",
     "dev:frontend": "vite",
-    "dev:backend": "node server/server.js",
+    "dev:backend": "node --watch-path=server --watch server/server.js",
     "build": "vite build",
     "preview": "vite preview",
     "start": "node server/server.js"

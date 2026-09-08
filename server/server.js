@@ -15,7 +15,8 @@ const PORT = process.env.PORT || 5001;
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Request logger
 app.use((req, res, next) => {
@@ -82,6 +83,19 @@ app.post('/api/deliveries/bulk', (req, res) => {
     res.status(201).json({ success: true, count: created.length, deliveries: created });
   } catch (err) {
     res.status(500).json({ error: 'Failed to bulk import deliveries', message: err.message });
+  }
+});
+
+// PATCH /api/deliveries/:id (update deliveredBy, status, etc.)
+app.patch('/api/deliveries/:id', (req, res) => {
+  try {
+    const updated = db.updateDelivery(req.params.id, req.body);
+    if (!updated) {
+      return res.status(404).json({ error: 'Delivery record not found' });
+    }
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update delivery record', message: err.message });
   }
 });
 

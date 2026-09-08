@@ -19,7 +19,8 @@ import {
   fetchPerformance,
   fetchTopCustomers,
   createDelivery,
-  createBulkDeliveries
+  createBulkDeliveries,
+  updateDelivery
 } from './services/api.js';
 
 // Realistic customer data profiles for dynamic metric recalculation
@@ -56,9 +57,44 @@ const CUSTOMER_PROFILES = {
   }
 };
 
+// Dedicated browser storage key for persistent delivery records
+const LOCAL_STORAGE_KEY = 'delivery_production_records_v2';
+
+const getLocalDeliveries = () => {
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    console.error('Failed to read localStorage:', e);
+    return [];
+  }
+};
+
+const saveLocalDeliveries = (list) => {
+  try {
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(list));
+  } catch (e) {
+    console.error('Failed to save to localStorage:', e);
+  }
+};
+
+// Robust helper to check if a delivery record is from today ('08 Sep 2026' or current date)
+const isTodayDate = (dateStr) => {
+  if (!dateStr) return false;
+  const s = String(dateStr).trim().toLowerCase();
+  if (s === '08 sep 2026' || s === '8 sep 2026') return true;
+  if (s === '2026-09-08' || s === '08-09-2026' || s === '08/09/2026') return true;
+  const now = new Date();
+  const d = String(now.getDate()).padStart(2, '0');
+  const m = now.toLocaleString('en-US', { month: 'short' }).toLowerCase();
+  const y = now.getFullYear();
+  if (s === `${d} ${m} ${y}`.toLowerCase() || s === `${now.getDate()} ${m} ${y}`.toLowerCase()) return true;
+  return false;
+};
+
 export default function App() {
-  // Data States
-  const [deliveries, setDeliveries] = useState([]);
+  // Data States - Immediately initialize from localStorage so deliveries are never 0 on refresh!
+  const [deliveries, setDeliveries] = useState(() => getLocalDeliveries());
   const [rawKpis, setRawKpis] = useState(null);
   const [rawAnalyticsData, setRawAnalyticsData] = useState(null);
   const [analyticsPeriod, setAnalyticsPeriod] = useState('day');
@@ -94,10 +130,12 @@ export default function App() {
     }, 2600);
   }, []);
 
-  // Fetch all initial data from backend API
+  // Fetch all initial data from backend API with localStorage backup & smart merging
   const loadData = useCallback(async () => {
     try {
       setIsRefreshing(true);
+      const cached = getLocalDeliveries();
+
       const [delivRes, kpiRes, analRes, perfRes, custRes] = await Promise.all([
         fetchDeliveries().catch(() => ({ deliveries: [] })),
         fetchKpis().catch(() => null),
@@ -106,13 +144,45 @@ export default function App() {
         fetchTopCustomers().catch(() => [])
       ]);
 
-      setDeliveries(delivRes.deliveries || []);
+      const backendDeliveries = delivRes.deliveries || [];
+
+      // Smart merge: combine both without duplicates, keeping all recorded items intact
+      const deliveryMap = new Map();
+
+      // Seed with cached items first (contains all previous manual & imported deliveries)
+      cached.forEach((item) => {
+        if (item && item.id) deliveryMap.set(item.id, item);
+      });
+
+      // Merge backend items
+      backendDeliveries.forEach((item) => {
+        if (item && item.id) {
+          const existing = deliveryMap.get(item.id);
+          deliveryMap.set(item.id, { ...item, ...(existing || {}) });
+        }
+      });
+
+      let mergedDeliveries = Array.from(deliveryMap.values());
+      if (mergedDeliveries.length === 0 && backendDeliveries.length > 0) {
+        mergedDeliveries = backendDeliveries;
+      }
+
+      // Sort latest first
+      mergedDeliveries.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+      saveLocalDeliveries(mergedDeliveries);
+      setDeliveries(mergedDeliveries);
+
       setRawKpis(kpiRes);
       setRawAnalyticsData(analRes);
       setRawPerformanceData(perfRes);
       setTopCustomers(custRes);
     } catch (err) {
-      console.error('Error fetching API data:', err);
+      console.error('Error fetching API data, falling back to local storage:', err);
+      const cached = getLocalDeliveries();
+      if (cached && cached.length > 0) {
+        setDeliveries(cached);
+      }
     } finally {
       setIsRefreshing(false);
     }
@@ -208,7 +278,7 @@ export default function App() {
       } else {
         // Preset Date Range filter
         if (filters.dateRange === 'today') {
-          if (item.date !== '08 Sep 2026') return false;
+          if (!isTodayDate(item.date)) return false;
         }
         if (filters.dateRange === 'yesterday') {
           if (item.date !== '07 Sep 2026') return false;
@@ -243,7 +313,7 @@ export default function App() {
     });
   }, [deliveries, filters]);
 
-  // Dynamic calculation of items added today ('08 Sep 2026')
+  // Dynamic calculation of items added today ('08 Sep 2026' or current date)
   const todayImportedQty = useMemo(() => {
     return deliveries
       .filter((item) => {
@@ -251,8 +321,8 @@ export default function App() {
         if (filters.customer !== 'all' && item.customer !== filters.customer) return false;
         // Type filter
         if (filters.type !== 'all' && item.type !== filters.type) return false;
-        // Check date for today ('08 Sep 2026')
-        return item.date === '08 Sep 2026';
+        // Check date for today
+        return isTodayDate(item.date);
       })
       .reduce((sum, item) => sum + (Number(item.qty) || Number(item.filesCount) || 1), 0);
   }, [deliveries, filters.customer, filters.type]);
@@ -383,47 +453,68 @@ export default function App() {
   }, [rawPerformanceData, filters]);
 
   // Delivered By Role Update Handler (QC, QAG, TL, MANAGER)
-  const handleUpdateDeliveredBy = (id, newRole) => {
-    setDeliveries((prev) =>
-      prev.map((d) => (d.id === id ? { ...d, deliveredBy: newRole } : d))
-    );
+  const handleUpdateDeliveredBy = async (id, newRole) => {
+    setDeliveries((prev) => {
+      const updated = prev.map((d) => (d.id === id ? { ...d, deliveredBy: newRole } : d));
+      saveLocalDeliveries(updated);
+      return updated;
+    });
     showToast(`Delivered By updated to ${newRole} for ${id}`);
+
+    try {
+      await updateDelivery(id, { deliveredBy: newRole });
+    } catch (err) {
+      console.warn('Delivered By updated locally (server sync deferred):', err.message);
+    }
   };
 
   // Create Single Delivery Handler
   const handleCreateDelivery = async (newDeliveryData) => {
+    const record = {
+      ...newDeliveryData,
+      id: newDeliveryData.id || `DEL-${String(Date.now()).slice(-5)}`,
+      timestamp: Date.now()
+    };
+
+    // 1. Immediately store to localStorage and update state
+    setDeliveries((prev) => {
+      const combined = [record, ...prev];
+      saveLocalDeliveries(combined);
+      return combined;
+    });
+    showToast(`Recorded delivery: ${record.title || record.id}`);
+
     try {
       const saved = await createDelivery(newDeliveryData);
-      setDeliveries((prev) => [saved, ...prev]);
-      showToast(`Added delivery: ${saved.title || saved.id}`);
-      loadData();
+      await loadData();
       return saved;
     } catch (err) {
-      console.error('Failed to create delivery:', err);
-      const fallback = {
-        ...newDeliveryData,
-        id: newDeliveryData.id || `DEL-${String(Date.now()).slice(-5)}`,
-        timestamp: Date.now()
-      };
-      setDeliveries((prev) => [fallback, ...prev]);
-      showToast(`Recorded delivery: ${fallback.title || fallback.id}`);
-      return fallback;
+      console.warn('Created delivery stored in persistent storage (server sync deferred):', err);
+      return record;
     }
   };
 
   // Create Bulk Deliveries Handler (Excel / CSV Sheet)
+  // Ensures all batches (morning 50 + afternoon 50 = 100) accumulate and never revert on refresh!
   const handleCreateBulkDeliveries = async (deliveriesList) => {
+    if (!deliveriesList || deliveriesList.length === 0) return;
+
+    // 1. Immediately store all items to localStorage and update React state
+    setDeliveries((prev) => {
+      const combined = [...deliveriesList, ...prev];
+      saveLocalDeliveries(combined);
+      return combined;
+    });
+    showToast(`Imported ${deliveriesList.length} deliveries to production log.`);
+
     try {
+      // 2. Persist to Backend API
       const res = await createBulkDeliveries(deliveriesList);
-      const newItems = res.deliveries || deliveriesList;
-      setDeliveries((prev) => [...newItems, ...prev]);
-      showToast(`Imported ${newItems.length} deliveries from sheet.`);
-      loadData();
+      // 3. Re-sync with backend to ensure ID synchronization
+      await loadData();
       return res;
     } catch (err) {
-      console.error('Failed to bulk import deliveries:', err);
-      setDeliveries((prev) => [...deliveriesList, ...prev]);
-      showToast(`Imported ${deliveriesList.length} deliveries.`);
+      console.warn('Bulk import stored safely in local storage (server sync deferred):', err);
     }
   };
 

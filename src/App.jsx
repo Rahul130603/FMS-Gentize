@@ -188,11 +188,13 @@ export default function App() {
         return false;
       }
       // Date Range filter
-      if (filters.dateRange === 'today' && item.date !== '07 Sep 2026') {
-        return false;
+      if (filters.dateRange === 'today') {
+        const isToday = item.date === '08 Sep 2026' || item.date === '07 Sep 2026';
+        if (!isToday) return false;
       }
-      if (filters.dateRange === 'yesterday' && item.date !== '06 Sep 2026') {
-        return false;
+      if (filters.dateRange === 'yesterday') {
+        const isYesterday = item.date === '06 Sep 2026';
+        if (!isYesterday) return false;
       }
       // Search keyword filter (ISBN, Title, Author, File, Customer, ID, Delivered By, Type)
       if (filters.search) {

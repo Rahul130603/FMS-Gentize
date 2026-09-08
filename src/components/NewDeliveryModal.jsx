@@ -7,10 +7,12 @@ import {
   FileEdit,
   UploadCloud,
   Download,
-  AlertCircle,
-  FileText,
   Trash2,
-  PackagePlus
+  PackagePlus,
+  Calendar,
+  UserCheck,
+  Hash,
+  Sparkles
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
@@ -26,9 +28,10 @@ const CUSTOMERS = [
 const TYPES = ['POD', 'EPDF', 'SCANNED FILE', 'E-ISBN'];
 const ROLES = ['QC', 'QAG', 'TL', 'MANAGER'];
 const STATUSES = ['Delivered', 'Pending', 'In Progress'];
+const TODAY_STR = '08 Sep 2026';
 
 export default function NewDeliveryModal({ onClose, onSubmit, onBulkSubmit, showToast }) {
-  const [activeTab, setActiveTab] = useState('single'); // 'single' | 'sheet'
+  const [activeTab, setActiveTab] = useState('sheet'); // Default to sheet or single as convenient
 
   // Single Entry Form State
   const [formData, setFormData] = useState({
@@ -38,19 +41,34 @@ export default function NewDeliveryModal({ onClose, onSubmit, onBulkSubmit, show
     author: '',
     type: 'POD',
     qty: 1,
-    date: '08 Sep 2026',
+    date: TODAY_STR,
     time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
     deliveredBy: 'QC',
     status: 'Delivered',
     fileName: ''
   });
 
-  // Sheet Upload State
+  // Sheet Upload Configuration States
+  const [sheetDeliveredBy, setSheetDeliveredBy] = useState('QC');
+  const [sheetDeliveryDate, setSheetDeliveryDate] = useState(TODAY_STR);
+  const [applyRoleToAll, setApplyRoleToAll] = useState(true);
+  const [applyTodayDate, setApplyTodayDate] = useState(true);
+
+  // Sheet Upload Data States
   const [parsedRows, setParsedRows] = useState([]);
   const [uploadedFileName, setUploadedFileName] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const fileInputRef = useRef(null);
+
+  // Helper to generate realistic ISBN-13
+  const generateRandomISBN = () => {
+    const part1 = Math.floor(100 + Math.random() * 900);
+    const part2 = Math.floor(10000 + Math.random() * 90000);
+    const part3 = Math.floor(10 + Math.random() * 90);
+    const part4 = Math.floor(1 + Math.random() * 9);
+    return `978-${part1}-${part2}-${part3}-${part4}`;
+  };
 
   // Handle Single Form Submit
   const handleSingleSubmit = async (e) => {
@@ -64,26 +82,80 @@ export default function NewDeliveryModal({ onClose, onSubmit, onBulkSubmit, show
     try {
       const deliveryPayload = {
         customer: formData.customer,
-        isbn: formData.isbn.trim() || `978-0-${Math.floor(100000 + Math.random() * 900000)}-${Math.floor(10 + Math.random() * 90)}-1`,
+        isbn: formData.isbn.trim() || generateRandomISBN(),
         title: formData.title.trim(),
         author: formData.author.trim() || 'Editorial Board',
         type: formData.type,
         qty: Number(formData.qty) || 1,
-        date: formData.date || '08 Sep 2026',
-        time: formData.time || '12:00 PM',
+        date: formData.date || TODAY_STR,
+        time: formData.time || new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
         deliveredBy: formData.deliveredBy,
         status: formData.status,
         file: formData.fileName.trim() || `${formData.title.trim().replace(/[^\w\d]/g, '_')}_${formData.type}.pdf`
       };
 
       await onSubmit(deliveryPayload);
-      if (showToast) showToast(`Delivery recorded: ${deliveryPayload.title}`);
+      if (showToast) showToast(`Delivery recorded: ${deliveryPayload.title} by ${deliveryPayload.deliveredBy}`);
       onClose();
     } catch (err) {
       if (showToast) showToast(`Error saving delivery: ${err.message}`);
     } finally {
       setSubmitting(false);
     }
+  };
+
+  // Change Role for Sheet and batch update parsed rows if applyRoleToAll is on
+  const handleSelectSheetRole = (role) => {
+    setSheetDeliveredBy(role);
+    if (applyRoleToAll && parsedRows.length > 0) {
+      setParsedRows((prev) =>
+        prev.map((row) => ({
+          ...row,
+          deliveredBy: role
+        }))
+      );
+      if (showToast) showToast(`Updated all ${parsedRows.length} sheet deliveries to role: ${role}`);
+    }
+  };
+
+  // Change Date for Sheet and batch update parsed rows if applyTodayDate is on
+  const handleDateChange = (newDate) => {
+    setSheetDeliveryDate(newDate);
+    if (applyTodayDate && parsedRows.length > 0) {
+      setParsedRows((prev) =>
+        prev.map((row) => ({
+          ...row,
+          date: newDate
+        }))
+      );
+    }
+  };
+
+  // Toggle Apply Today Date
+  const handleToggleApplyTodayDate = (checked) => {
+    setApplyTodayDate(checked);
+    if (checked && parsedRows.length > 0) {
+      setParsedRows((prev) =>
+        prev.map((row) => ({
+          ...row,
+          date: sheetDeliveryDate
+        }))
+      );
+    }
+  };
+
+  // Change individual row role in preview table
+  const handleRowRoleChange = (index, newRole) => {
+    setParsedRows((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], deliveredBy: newRole };
+      return updated;
+    });
+  };
+
+  // Delete individual row from parsed preview
+  const handleDeleteRow = (index) => {
+    setParsedRows((prev) => prev.filter((_, i) => i !== index));
   };
 
   // Handle File Drag & Drop or Selection
@@ -117,6 +189,8 @@ export default function NewDeliveryModal({ onClose, onSubmit, onBulkSubmit, show
           return;
         }
 
+        const currentTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
         // Map columns flexibly
         const mapped = rawJson.map((row, index) => {
           const customer =
@@ -125,15 +199,31 @@ export default function NewDeliveryModal({ onClose, onSubmit, onBulkSubmit, show
             row['Title'] || row['title'] || row['Book Title'] || row['Book'] || `Production Book ${index + 1}`;
           const author =
             row['Author'] || row['author'] || row['Writer'] || 'Editorial Board';
-          const isbn =
-            row['ISBN'] || row['isbn'] || `978-0-${Math.floor(100000 + Math.random() * 900000)}-1`;
-          const typeRaw = (row['Type'] || row['type'] || row['Production Type'] || 'POD').toUpperCase();
+
+          // Extract ISBN or auto-generate valid format
+          const rawIsbn = row['ISBN'] || row['isbn'] || row['Isbn'] || row['Book ISBN'] || row['isbn13'] || '';
+          const isbn = String(rawIsbn).trim() || generateRandomISBN();
+
+          const typeRaw = String(row['Type'] || row['type'] || row['Production Type'] || 'POD').toUpperCase();
           const type = TYPES.includes(typeRaw) ? typeRaw : 'POD';
           const qty = Number(row['Quantity'] || row['qty'] || row['Qty'] || 1) || 1;
-          const deliveredBy = (row['Delivered By'] || row['deliveredBy'] || row['Role'] || 'QC').toUpperCase();
+
+          // Determine Delivered By (Role)
+          let deliveredBy = sheetDeliveredBy;
+          if (!applyRoleToAll) {
+            const rowRole = String(row['Delivered By'] || row['deliveredBy'] || row['Role'] || '').toUpperCase();
+            if (ROLES.includes(rowRole)) deliveredBy = rowRole;
+          }
+
           const status = row['Status'] || row['status'] || 'Delivered';
-          const date = row['Date'] || row['date'] || '08 Sep 2026';
-          const time = row['Time'] || row['time'] || '12:00 PM';
+
+          // Determine Delivery Date: default to sheetDeliveryDate if applyTodayDate is checked
+          let date = sheetDeliveryDate;
+          if (!applyTodayDate) {
+            date = row['Date'] || row['date'] || sheetDeliveryDate;
+          }
+
+          const time = row['Time'] || row['time'] || currentTime;
           const file =
             row['File Name'] || row['file'] || `${title.replace(/[^\w\d]/g, '_')}_${type}.pdf`;
 
@@ -145,7 +235,7 @@ export default function NewDeliveryModal({ onClose, onSubmit, onBulkSubmit, show
             isbn,
             type,
             qty,
-            deliveredBy: ROLES.includes(deliveredBy) ? deliveredBy : 'QC',
+            deliveredBy,
             status,
             date,
             time,
@@ -164,7 +254,7 @@ export default function NewDeliveryModal({ onClose, onSubmit, onBulkSubmit, show
     reader.readAsBinaryString(file);
   };
 
-  // Download Sample CSV Template
+  // Download Sample Excel Template with ISBN and Delivered By
   const handleDownloadSample = () => {
     const sampleRows = [
       {
@@ -175,7 +265,7 @@ export default function NewDeliveryModal({ onClose, onSubmit, onBulkSubmit, show
         'Author': 'Arthur C. Miller',
         'Type': 'POD',
         'Quantity': 2,
-        'Date': '08 Sep 2026',
+        'Date': TODAY_STR,
         'Time': '10:30 AM',
         'Delivered By': 'QC',
         'Status': 'Delivered'
@@ -188,7 +278,7 @@ export default function NewDeliveryModal({ onClose, onSubmit, onBulkSubmit, show
         'Author': 'Joshua Bloch',
         'Type': 'EPDF',
         'Quantity': 1,
-        'Date': '08 Sep 2026',
+        'Date': TODAY_STR,
         'Time': '11:15 AM',
         'Delivered By': 'QAG',
         'Status': 'Delivered'
@@ -201,10 +291,23 @@ export default function NewDeliveryModal({ onClose, onSubmit, onBulkSubmit, show
         'Author': 'Erich Gamma',
         'Type': 'SCANNED FILE',
         'Quantity': 3,
-        'Date': '08 Sep 2026',
+        'Date': TODAY_STR,
         'Time': '02:00 PM',
         'Delivered By': 'TL',
         'Status': 'In Progress'
+      },
+      {
+        'Delivery ID': 'DEL-2026-033',
+        'Customer': 'Prime Publishers',
+        'ISBN': '978-0-596-51774-8',
+        'Title': 'Digital Typography & Layouts',
+        'Author': 'Douglas Crockford',
+        'Type': 'E-ISBN',
+        'Quantity': 1,
+        'Date': TODAY_STR,
+        'Time': '03:45 PM',
+        'Delivered By': 'MANAGER',
+        'Status': 'Delivered'
       }
     ];
 
@@ -212,7 +315,7 @@ export default function NewDeliveryModal({ onClose, onSubmit, onBulkSubmit, show
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Delivery_Template');
     XLSX.writeFile(wb, 'Delivery_Production_Sample_Sheet.xlsx');
-    if (showToast) showToast('Sample Excel template downloaded.');
+    if (showToast) showToast('Sample Excel template downloaded with ISBN and Role headers.');
   };
 
   // Handle Bulk Import Submit
@@ -230,11 +333,35 @@ export default function NewDeliveryModal({ onClose, onSubmit, onBulkSubmit, show
     }
   };
 
+  // Badge class helper for roles
+  const getRoleStyle = (role, isSelected) => {
+    switch (role) {
+      case 'QC':
+        return isSelected
+          ? 'bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-400/40'
+          : 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100';
+      case 'QAG':
+        return isSelected
+          ? 'bg-blue-600 text-white shadow-sm ring-2 ring-blue-400/40'
+          : 'bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100';
+      case 'TL':
+        return isSelected
+          ? 'bg-purple-600 text-white shadow-sm ring-2 ring-purple-400/40'
+          : 'bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100';
+      case 'MANAGER':
+        return isSelected
+          ? 'bg-indigo-600 text-white shadow-sm ring-2 ring-indigo-400/40'
+          : 'bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100';
+      default:
+        return 'bg-slate-100 text-slate-700';
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-2xl w-full max-h-[92vh] flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-4xl w-full max-h-[92vh] flex flex-col overflow-hidden">
+        {/* Modal Header */}
+        <div className="px-6 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
           <div className="flex items-center space-x-3">
             <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold shadow-2xs">
               <PackagePlus className="w-5 h-5 text-blue-600" />
@@ -243,8 +370,8 @@ export default function NewDeliveryModal({ onClose, onSubmit, onBulkSubmit, show
               <h3 className="text-sm font-bold text-slate-900 leading-tight">
                 Add Production Delivery
               </h3>
-              <p className="text-2xs text-slate-400">
-                Log new customer delivery via single manual entry or bulk spreadsheet upload
+              <p className="text-2xs text-slate-500">
+                Record new deliveries with ISBN, role assignment (QC, QAG, TL, MANAGER) and today's dispatch timestamp
               </p>
             </div>
           </div>
@@ -259,18 +386,6 @@ export default function NewDeliveryModal({ onClose, onSubmit, onBulkSubmit, show
 
         {/* Tab Switcher */}
         <div className="px-6 pt-3 pb-1 border-b border-slate-100 flex items-center space-x-2 bg-white">
-          <button
-            type="button"
-            onClick={() => setActiveTab('single')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 cursor-pointer ${
-              activeTab === 'single'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            <FileEdit className="w-3.5 h-3.5" />
-            <span>Manual Entry</span>
-          </button>
           <button
             type="button"
             onClick={() => setActiveTab('sheet')}
@@ -288,13 +403,296 @@ export default function NewDeliveryModal({ onClose, onSubmit, onBulkSubmit, show
               </span>
             )}
           </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('single')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 cursor-pointer ${
+              activeTab === 'single'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <FileEdit className="w-3.5 h-3.5" />
+            <span>Manual Single Entry</span>
+          </button>
         </div>
 
         {/* Modal Body */}
-        <div className="flex-1 overflow-y-auto p-6">
-          {activeTab === 'single' ? (
-            /* TAB 1: MANUAL ENTRY FORM */
+        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+          {activeTab === 'sheet' ? (
+            /* ========================================================================= */
+            /* TAB 1: SHEET / EXCEL / CSV UPLOAD WITH ROLE ASSIGNMENT & ISBN PREVIEW     */
+            /* ========================================================================= */
+            <div className="space-y-4">
+              {/* TOP BAR: Role Assignment & Today's Delivery Configuration */}
+              <div className="bg-gradient-to-r from-blue-50/80 via-slate-50 to-indigo-50/80 border border-blue-100/80 rounded-2xl p-4 space-y-3.5 shadow-2xs">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                  {/* Who is moving the sheet (QC, QAG, TL, MANAGER) */}
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <UserCheck className="w-4 h-4 text-blue-600" />
+                      <span className="text-xs font-bold text-slate-800">
+                        Who is moving / delivering this sheet?
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      Choose role to stamp all imported records (QC, QAG, TL, MANAGER)
+                    </p>
+                  </div>
+
+                  {/* Role Selector Buttons */}
+                  <div className="flex items-center space-x-1.5">
+                    {ROLES.map((role) => {
+                      const isSelected = sheetDeliveredBy === role;
+                      return (
+                        <button
+                          key={role}
+                          type="button"
+                          onClick={() => handleSelectSheetRole(role)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${getRoleStyle(
+                            role,
+                            isSelected
+                          )}`}
+                        >
+                          {role}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="pt-2.5 border-t border-slate-200/80 flex flex-wrap items-center justify-between gap-3 text-xs">
+                  {/* Today's Delivery Option */}
+                  <div className="flex items-center space-x-2">
+                    <label className="flex items-center space-x-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={applyTodayDate}
+                        onChange={(e) => handleToggleApplyTodayDate(e.target.checked)}
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer w-4 h-4"
+                      />
+                      <span className="text-xs font-bold text-slate-800 flex items-center space-x-1">
+                        <Calendar className="w-3.5 h-3.5 text-blue-600" />
+                        <span>Record as Today's Delivery:</span>
+                      </span>
+                    </label>
+
+                    <input
+                      type="text"
+                      value={sheetDeliveryDate}
+                      onChange={(e) => handleDateChange(e.target.value)}
+                      className="px-2.5 py-1 text-xs rounded-lg border border-slate-200 bg-white font-semibold text-blue-700 w-32 shadow-2xs"
+                      title="Delivery Date for Imported Records"
+                    />
+                    <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-800 font-extrabold text-[10px] rounded-md">
+                      Today
+                    </span>
+                  </div>
+
+                  {/* Sample Template Download */}
+                  <button
+                    type="button"
+                    onClick={handleDownloadSample}
+                    className="px-3 py-1.5 bg-white border border-blue-200 hover:border-blue-300 text-blue-700 rounded-xl text-xs font-bold flex items-center space-x-1.5 shadow-2xs hover:bg-blue-50/50 cursor-pointer shrink-0 transition-colors"
+                  >
+                    <Download className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Download Sample Template</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Drag and Drop Zone */}
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setIsDragging(true);
+                }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all ${
+                  isDragging
+                    ? 'border-blue-500 bg-blue-50/60 scale-[0.99]'
+                    : 'border-slate-200 hover:border-blue-400 bg-slate-50/50 hover:bg-slate-50'
+                }`}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".xlsx, .xls, .csv"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+                <div className="flex flex-col items-center justify-center space-y-2">
+                  <div className="w-12 h-12 rounded-2xl bg-white shadow-sm border border-slate-200 flex items-center justify-center text-blue-600">
+                    <UploadCloud className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-slate-800">
+                      {uploadedFileName ? (
+                        <span className="text-blue-600 font-extrabold">{uploadedFileName}</span>
+                      ) : (
+                        'Click to browse or drag & drop Excel / CSV file here'
+                      )}
+                    </p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Supports .xlsx, .xls, and .csv files. Columns: Customer, ISBN, Title, Author, Type, Qty
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Parsed Preview Table with Prominent ISBN and Role */}
+              {parsedRows.length > 0 && (
+                <div className="space-y-2 border border-slate-200 rounded-2xl overflow-hidden shadow-2xs bg-white">
+                  <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between text-xs">
+                    <div className="flex items-center space-x-2">
+                      <span className="font-bold text-slate-800">Preview Parsed Deliveries:</span>
+                      <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 font-extrabold text-2xs rounded-full">
+                        {parsedRows.length} Deliveries Ready
+                      </span>
+                      <span className="text-slate-400 text-2xs">|</span>
+                      <span className="text-2xs text-slate-600 font-medium">
+                        Moved by:{' '}
+                        <span className="font-extrabold text-blue-700">{sheetDeliveredBy}</span>
+                      </span>
+                      <span className="text-slate-400 text-2xs">|</span>
+                      <span className="text-2xs text-slate-600 font-medium">
+                        Delivery Date:{' '}
+                        <span className="font-extrabold text-slate-800">{sheetDeliveryDate}</span>
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setParsedRows([]);
+                        setUploadedFileName('');
+                      }}
+                      className="text-rose-600 hover:text-rose-800 text-2xs font-semibold flex items-center space-x-1 cursor-pointer"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      <span>Clear</span>
+                    </button>
+                  </div>
+
+                  <div className="max-h-60 overflow-y-auto">
+                    <table className="w-full text-left text-2xs">
+                      <thead className="bg-slate-100/90 text-slate-600 uppercase font-bold sticky top-0 border-b border-slate-200">
+                        <tr>
+                          <th className="px-3 py-2 whitespace-nowrap">ISBN</th>
+                          <th className="px-3 py-2">Title</th>
+                          <th className="px-3 py-2">Customer</th>
+                          <th className="px-3 py-2 text-center">Type</th>
+                          <th className="px-3 py-2 text-right">Qty</th>
+                          <th className="px-3 py-2 text-center whitespace-nowrap">Moved By (Role)</th>
+                          <th className="px-3 py-2 whitespace-nowrap">Date</th>
+                          <th className="px-3 py-2 text-center">Status</th>
+                          <th className="px-2 py-2 text-center w-8">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-slate-700">
+                        {parsedRows.map((r, i) => (
+                          <tr key={i} className="hover:bg-slate-50/80 transition-colors">
+                            {/* Prominent ISBN column */}
+                            <td className="px-3 py-2 font-mono font-bold text-blue-700 whitespace-nowrap">
+                              {r.isbn}
+                            </td>
+                            {/* Book Title */}
+                            <td className="px-3 py-2 font-semibold text-slate-900 truncate max-w-[170px]" title={r.title}>
+                              {r.title}
+                            </td>
+                            {/* Customer */}
+                            <td className="px-3 py-2 truncate max-w-[130px] font-medium text-slate-600">
+                              {r.customer}
+                            </td>
+                            {/* Type */}
+                            <td className="px-3 py-2 text-center whitespace-nowrap">
+                              <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 font-bold text-[9px] border border-blue-200">
+                                {r.type}
+                              </span>
+                            </td>
+                            {/* Qty */}
+                            <td className="px-3 py-2 text-right font-bold text-slate-800">
+                              {r.qty}
+                            </td>
+                            {/* Moved By (Role) with quick switcher */}
+                            <td className="px-3 py-2 text-center whitespace-nowrap">
+                              <select
+                                value={r.deliveredBy}
+                                onChange={(e) => handleRowRoleChange(i, e.target.value)}
+                                className="text-[10px] font-extrabold px-2 py-0.5 rounded-md border border-slate-200 bg-white text-slate-800 cursor-pointer focus:ring-1 focus:ring-blue-500 outline-hidden"
+                              >
+                                {ROLES.map((role) => (
+                                  <option key={role} value={role}>
+                                    {role}
+                                  </option>
+                                ))}
+                              </select>
+                            </td>
+                            {/* Delivery Date */}
+                            <td className="px-3 py-2 whitespace-nowrap text-slate-600 font-medium">
+                              {r.date}
+                            </td>
+                            {/* Status */}
+                            <td className="px-3 py-2 text-center whitespace-nowrap">
+                              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                {r.status}
+                              </span>
+                            </td>
+                            {/* Action Remove */}
+                            <td className="px-2 py-2 text-center">
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteRow(i)}
+                                className="text-slate-400 hover:text-rose-600 p-1 rounded transition-colors cursor-pointer"
+                                title="Remove row"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            /* ========================================================================= */
+            /* TAB 2: MANUAL SINGLE ENTRY FORM                                           */
+            /* ========================================================================= */
             <form id="new-delivery-form" onSubmit={handleSingleSubmit} className="space-y-4 text-xs">
+              {/* Who is moving / delivering selector */}
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center space-x-2">
+                  <UserCheck className="w-4 h-4 text-blue-600" />
+                  <div>
+                    <span className="text-xs font-bold text-slate-800">Delivered By (Role) *</span>
+                    <p className="text-[10px] text-slate-500">Select responsible team role</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-1.5">
+                  {ROLES.map((role) => {
+                    const isSelected = formData.deliveredBy === role;
+                    return (
+                      <button
+                        key={role}
+                        type="button"
+                        onClick={() => setFormData({ ...formData, deliveredBy: role })}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${getRoleStyle(
+                          role,
+                          isSelected
+                        )}`}
+                      >
+                        {role}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Customer */}
                 <div>
@@ -347,17 +745,29 @@ export default function NewDeliveryModal({ onClose, onSubmit, onBulkSubmit, show
                   />
                 </div>
 
-                {/* ISBN */}
+                {/* ISBN with Auto-generator */}
                 <div>
-                  <label className="block text-2xs font-bold uppercase tracking-wider text-slate-500 mb-1">
-                    ISBN
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-2xs font-bold uppercase tracking-wider text-slate-500 flex items-center space-x-1">
+                      <Hash className="w-3 h-3 text-blue-600" />
+                      <span>ISBN *</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, isbn: generateRandomISBN() })}
+                      className="text-[10px] font-bold text-blue-600 hover:text-blue-700 flex items-center space-x-1 cursor-pointer"
+                    >
+                      <Sparkles className="w-3 h-3" />
+                      <span>Auto Generate</span>
+                    </button>
+                  </div>
                   <input
                     type="text"
+                    required
                     value={formData.isbn}
                     onChange={(e) => setFormData({ ...formData, isbn: e.target.value })}
                     placeholder="e.g. 978-0-13-235088-4"
-                    className="w-full text-xs rounded-lg border border-slate-200 px-3 py-2 text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-hidden font-mono font-medium bg-white"
+                    className="w-full text-xs rounded-lg border border-slate-200 px-3 py-2 text-blue-700 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-hidden font-mono font-bold bg-white"
                   />
                 </div>
 
@@ -375,24 +785,6 @@ export default function NewDeliveryModal({ onClose, onSubmit, onBulkSubmit, show
                   />
                 </div>
 
-                {/* Delivered By */}
-                <div>
-                  <label className="block text-2xs font-bold uppercase tracking-wider text-slate-500 mb-1">
-                    Delivered By (Role) *
-                  </label>
-                  <select
-                    value={formData.deliveredBy}
-                    onChange={(e) => setFormData({ ...formData, deliveredBy: e.target.value })}
-                    className="w-full text-xs rounded-lg border border-slate-200 px-3 py-2 text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-hidden font-bold bg-white cursor-pointer"
-                  >
-                    {ROLES.map((r) => (
-                      <option key={r} value={r}>
-                        {r}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
                 {/* Quantity */}
                 <div>
                   <label className="block text-2xs font-bold uppercase tracking-wider text-slate-500 mb-1">
@@ -407,17 +799,17 @@ export default function NewDeliveryModal({ onClose, onSubmit, onBulkSubmit, show
                   />
                 </div>
 
-                {/* Delivery Date */}
+                {/* Delivery Date (Today) */}
                 <div>
                   <label className="block text-2xs font-bold uppercase tracking-wider text-slate-500 mb-1">
-                    Delivery Date
+                    Delivery Date (Today)
                   </label>
                   <input
                     type="text"
                     value={formData.date}
                     onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                     placeholder="e.g. 08 Sep 2026"
-                    className="w-full text-xs rounded-lg border border-slate-200 px-3 py-2 text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-hidden font-medium bg-white"
+                    className="w-full text-xs rounded-lg border border-slate-200 px-3 py-2 text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-hidden font-semibold bg-white"
                   />
                 </div>
 
@@ -452,155 +844,26 @@ export default function NewDeliveryModal({ onClose, onSubmit, onBulkSubmit, show
                     ))}
                   </select>
                 </div>
-
-                {/* Custom File Name (Optional) */}
-                <div>
-                  <label className="block text-2xs font-bold uppercase tracking-wider text-slate-500 mb-1">
-                    File Name (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.fileName}
-                    onChange={(e) => setFormData({ ...formData, fileName: e.target.value })}
-                    placeholder="Auto-generated if empty"
-                    className="w-full text-xs rounded-lg border border-slate-200 px-3 py-2 text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-hidden font-mono font-medium bg-white"
-                  />
-                </div>
               </div>
             </form>
-          ) : (
-            /* TAB 2: SHEET / EXCEL / CSV UPLOAD */
-            <div className="space-y-4">
-              {/* Instructions & Template Download Bar */}
-              <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl flex items-center justify-between">
-                <div className="flex items-center space-x-2 text-xs text-blue-900 font-medium">
-                  <AlertCircle className="w-4 h-4 text-blue-600 shrink-0" />
-                  <span>Upload an Excel (.xlsx, .xls) or CSV sheet with delivery records.</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleDownloadSample}
-                  className="px-2.5 py-1 bg-white border border-blue-200 hover:border-blue-300 text-blue-700 rounded-lg text-2xs font-bold flex items-center space-x-1.5 shadow-2xs hover:bg-blue-50/50 cursor-pointer shrink-0 ml-2"
-                >
-                  <Download className="w-3.5 h-3.5 text-blue-600" />
-                  <span>Sample Template</span>
-                </button>
-              </div>
-
-              {/* Drag and Drop Zone */}
-              <div
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  setIsDragging(true);
-                }}
-                onDragLeave={() => setIsDragging(false)}
-                onDrop={handleDrop}
-                onClick={() => fileInputRef.current?.click()}
-                className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all ${
-                  isDragging
-                    ? 'border-blue-500 bg-blue-50/60 scale-[0.99]'
-                    : 'border-slate-200 hover:border-blue-400 bg-slate-50/50 hover:bg-slate-50'
-                }`}
-              >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".xlsx, .xls, .csv"
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
-                <div className="flex flex-col items-center justify-center space-y-2">
-                  <div className="w-12 h-12 rounded-2xl bg-white shadow-sm border border-slate-200 flex items-center justify-center text-blue-600">
-                    <UploadCloud className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-slate-800">
-                      {uploadedFileName ? (
-                        <span className="text-blue-600">{uploadedFileName}</span>
-                      ) : (
-                        'Click to browse or drag & drop sheet file here'
-                      )}
-                    </p>
-                    <p className="text-2xs text-slate-400 mt-0.5">
-                      Supports Excel (.xlsx, .xls) and Comma-Separated (.csv) files
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Parsed Preview Table */}
-              {parsedRows.length > 0 && (
-                <div className="space-y-2 border border-slate-200 rounded-xl overflow-hidden shadow-2xs bg-white">
-                  <div className="px-3.5 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between text-xs">
-                    <div className="flex items-center space-x-2">
-                      <span className="font-bold text-slate-800">Preview Parsed Records:</span>
-                      <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 font-extrabold text-2xs rounded-full">
-                        {parsedRows.length} Deliveries Ready
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setParsedRows([]);
-                        setUploadedFileName('');
-                      }}
-                      className="text-rose-600 hover:text-rose-800 text-2xs font-semibold flex items-center space-x-1 cursor-pointer"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                      <span>Clear</span>
-                    </button>
-                  </div>
-
-                  <div className="max-h-48 overflow-y-auto">
-                    <table className="w-full text-left text-2xs">
-                      <thead className="bg-slate-100 text-slate-600 uppercase font-bold sticky top-0 border-b border-slate-200">
-                        <tr>
-                          <th className="px-3 py-1.5">Title</th>
-                          <th className="px-3 py-1.5">Customer</th>
-                          <th className="px-3 py-1.5">Type</th>
-                          <th className="px-3 py-1.5">Qty</th>
-                          <th className="px-3 py-1.5">By</th>
-                          <th className="px-3 py-1.5">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 text-slate-700">
-                        {parsedRows.map((r, i) => (
-                          <tr key={i} className="hover:bg-slate-50">
-                            <td className="px-3 py-1.5 font-semibold text-slate-900 truncate max-w-[150px]">
-                              {r.title}
-                            </td>
-                            <td className="px-3 py-1.5 truncate max-w-[120px]">{r.customer}</td>
-                            <td className="px-3 py-1.5">
-                              <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 font-bold text-[9px]">
-                                {r.type}
-                              </span>
-                            </td>
-                            <td className="px-3 py-1.5 font-bold">{r.qty}</td>
-                            <td className="px-3 py-1.5">
-                              <span className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-bold text-[9px]">
-                                {r.deliveredBy}
-                              </span>
-                            </td>
-                            <td className="px-3 py-1.5">
-                              <span className="text-emerald-600 font-semibold">{r.status}</span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-            </div>
           )}
         </div>
 
         {/* Modal Footer */}
-        <div className="px-6 py-3.5 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
-          <div className="text-2xs text-slate-400">
-            {activeTab === 'single'
-              ? 'Creates 1 new delivery record immediately'
-              : `${parsedRows.length} records will be imported into delivery registry`}
+        <div className="px-6 py-3.5 border-t border-slate-100 flex items-center justify-between bg-slate-50/70">
+          <div className="text-2xs text-slate-500 font-medium">
+            {activeTab === 'single' ? (
+              <span>
+                Saving 1 delivery as <span className="font-bold text-blue-700">{formData.deliveredBy}</span> for{' '}
+                <span className="font-bold text-slate-700">{formData.date}</span>
+              </span>
+            ) : (
+              <span>
+                {parsedRows.length > 0
+                  ? `${parsedRows.length} deliveries ready to import as ${sheetDeliveredBy} for ${sheetDeliveryDate}`
+                  : `Select Excel or CSV file to import as ${sheetDeliveredBy}`}
+              </span>
+            )}
           </div>
 
           <div className="flex items-center space-x-2">
@@ -634,7 +897,7 @@ export default function NewDeliveryModal({ onClose, onSubmit, onBulkSubmit, show
                   {submitting
                     ? 'Importing...'
                     : parsedRows.length > 0
-                    ? `Import ${parsedRows.length} Deliveries`
+                    ? `Import ${parsedRows.length} Deliveries (as ${sheetDeliveredBy})`
                     : 'Import Sheet'}
                 </span>
               </button>

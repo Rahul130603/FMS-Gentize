@@ -98,6 +98,16 @@ export const db = {
     };
 
     data.deliveries.unshift(record);
+    if (data.kpis) {
+      const addQty = record.qty || 1;
+      data.kpis.today = (data.kpis.today || 0) + addQty;
+      data.kpis.week = (data.kpis.week || 0) + addQty;
+      data.kpis.month = (data.kpis.month || 0) + addQty;
+      data.kpis.total = (data.kpis.total || 0) + addQty;
+      if (data.kpis.typeBreakdown && data.kpis.typeBreakdown[record.type] !== undefined) {
+        data.kpis.typeBreakdown[record.type] += addQty;
+      }
+    }
     writeData(data);
     return record;
   },
@@ -106,9 +116,11 @@ export const db = {
     const data = readData();
     const createdRecords = [];
     const baseTime = Date.now();
+    let totalAddedQty = 0;
 
     records.forEach((item, idx) => {
       const id = item.id || `DEL-${String(baseTime + idx).slice(-5)}`;
+      const qty = Number(item.qty) || 1;
       const record = {
         id,
         customer: item.customer || 'ABC Publishing',
@@ -117,7 +129,7 @@ export const db = {
         author: item.author || 'Editorial Board',
         file: item.file || (item.title ? `${item.title.replace(/[^\w\d]/g, '_')}_${item.type || 'POD'}.pdf` : `${id}_document.pdf`),
         type: item.type || 'POD',
-        qty: Number(item.qty) || 1,
+        qty,
         date: item.date || '08 Sep 2026',
         time: item.time || new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
         deliveredBy: item.deliveredBy || 'QC',
@@ -126,7 +138,19 @@ export const db = {
       };
       createdRecords.push(record);
       data.deliveries.unshift(record);
+      totalAddedQty += qty;
+
+      if (data.kpis?.typeBreakdown && data.kpis.typeBreakdown[record.type] !== undefined) {
+        data.kpis.typeBreakdown[record.type] += qty;
+      }
     });
+
+    if (data.kpis) {
+      data.kpis.today = (data.kpis.today || 0) + totalAddedQty;
+      data.kpis.week = (data.kpis.week || 0) + totalAddedQty;
+      data.kpis.month = (data.kpis.month || 0) + totalAddedQty;
+      data.kpis.total = (data.kpis.total || 0) + totalAddedQty;
+    }
 
     writeData(data);
     return createdRecords;

@@ -23,7 +23,8 @@ import {
   Clock8,
   AlertOctagon,
   MessageSquarePlus,
-  LifeBuoy
+  LifeBuoy,
+  Truck
 } from 'lucide-react';
 import { usePublishing } from '../../context/PublishingContext';
 
@@ -248,6 +249,17 @@ export function Sidebar({ mobileOpen, setMobileOpen }) {
                   <div className="flex items-center gap-2.5">
                     <LifeBuoy className="w-3.5 h-3.5 text-blue-600 shrink-0" />
                     <span>Technical Query Reports</span>
+                  </div>
+                </NavLink>
+
+                <NavLink
+                  to="/reports/delivery-production-count"
+                  onClick={() => setMobileOpen(false)}
+                  className={subNavLinkClass}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Truck className="w-3.5 h-3.5 text-cyan-600 shrink-0" />
+                    <span>Delivery Production Count</span>
                   </div>
                 </NavLink>
 

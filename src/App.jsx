@@ -16,6 +16,7 @@ import { TechnicalQueryDashboard } from './pages/technicalQuery/TechnicalQueryDa
 import { RaiseQueryPage } from './pages/technicalQuery/RaiseQueryPage';
 import { MyQueriesPage } from './pages/technicalQuery/MyQueriesPage';
 import { TechnicalQueryReportsPage } from './pages/technicalQuery/TechnicalQueryReportsPage';
+import { DeliveryProductionCountPage } from './pages/DeliveryProductionCountPage';
 
 export function App() {
   return (
@@ -34,6 +35,7 @@ export function App() {
         <Route path="/reports/error-reports" element={<ErrorReportsPage />} />
         <Route path="/reports/internal-feedback" element={<InternalFeedbackPage />} />
         <Route path="/reports/technical-queries" element={<TechnicalQueryReportsPage />} />
+        <Route path="/reports/delivery-production-count" element={<DeliveryProductionCountPage />} />
 
         {/* Technical Query Operations */}
         <Route path="/technical-query/dashboard" element={<TechnicalQueryDashboard />} />

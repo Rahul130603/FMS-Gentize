@@ -9,6 +9,7 @@ import TopCustomers from './components/TopCustomers.jsx';
 import RecentActivityTable from './components/RecentActivityTable.jsx';
 import FileListTable from './components/FileListTable.jsx';
 import DeliveryDetailsModal from './components/DeliveryDetailsModal.jsx';
+import NewDeliveryModal from './components/NewDeliveryModal.jsx';
 import Toast from './components/Toast.jsx';
 
 import {
@@ -16,7 +17,9 @@ import {
   fetchKpis,
   fetchAnalytics,
   fetchPerformance,
-  fetchTopCustomers
+  fetchTopCustomers,
+  createDelivery,
+  createBulkDeliveries
 } from './services/api.js';
 
 // Realistic customer data profiles for dynamic metric recalculation
@@ -65,6 +68,7 @@ export default function App() {
 
   // UI States
   const [filterOpen, setFilterOpen] = useState(false);
+  const [isNewDeliveryModalOpen, setIsNewDeliveryModalOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedDelivery, setSelectedDelivery] = useState(null);
   const [quickDateScope, setQuickDateScope] = useState('week');
@@ -348,6 +352,43 @@ export default function App() {
     showToast(`Delivered By updated to ${newRole} for ${id}`);
   };
 
+  // Create Single Delivery Handler
+  const handleCreateDelivery = async (newDeliveryData) => {
+    try {
+      const saved = await createDelivery(newDeliveryData);
+      setDeliveries((prev) => [saved, ...prev]);
+      showToast(`Added delivery: ${saved.title || saved.id}`);
+      loadData();
+      return saved;
+    } catch (err) {
+      console.error('Failed to create delivery:', err);
+      const fallback = {
+        ...newDeliveryData,
+        id: newDeliveryData.id || `DEL-${String(Date.now()).slice(-5)}`,
+        timestamp: Date.now()
+      };
+      setDeliveries((prev) => [fallback, ...prev]);
+      showToast(`Recorded delivery: ${fallback.title || fallback.id}`);
+      return fallback;
+    }
+  };
+
+  // Create Bulk Deliveries Handler (Excel / CSV Sheet)
+  const handleCreateBulkDeliveries = async (deliveriesList) => {
+    try {
+      const res = await createBulkDeliveries(deliveriesList);
+      const newItems = res.deliveries || deliveriesList;
+      setDeliveries((prev) => [...newItems, ...prev]);
+      showToast(`Imported ${newItems.length} deliveries from sheet.`);
+      loadData();
+      return res;
+    } catch (err) {
+      console.error('Failed to bulk import deliveries:', err);
+      setDeliveries((prev) => [...deliveriesList, ...prev]);
+      showToast(`Imported ${deliveriesList.length} deliveries.`);
+    }
+  };
+
   // Header Refresh Action
   const handleRefresh = () => {
     showToast('Syncing delivery production metrics...');
@@ -422,6 +463,7 @@ export default function App() {
         showToast={showToast}
         isFilterOpen={filterOpen}
         onToggleFilterPanel={() => setFilterOpen((prev) => !prev)}
+        onOpenNewDeliveryModal={() => setIsNewDeliveryModalOpen(true)}
       />
 
       {/* 2. MAIN DASHBOARD CONTENT */}
@@ -505,6 +547,16 @@ export default function App() {
           delivery={selectedDelivery}
           onClose={() => setSelectedDelivery(null)}
           onUpdateDeliveredBy={handleUpdateDeliveredBy}
+        />
+      )}
+
+      {/* NEW DELIVERY MODAL (MANUAL ENTRY + EXCEL / CSV IMPORT) */}
+      {isNewDeliveryModalOpen && (
+        <NewDeliveryModal
+          onClose={() => setIsNewDeliveryModalOpen(false)}
+          onSubmit={handleCreateDelivery}
+          onBulkSubmit={handleCreateBulkDeliveries}
+          showToast={showToast}
         />
       )}
 

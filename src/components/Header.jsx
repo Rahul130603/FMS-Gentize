@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Truck, ChevronLeft, ChevronRight, Calendar, ChevronDown, RefreshCw, Download, FileSpreadsheet, FileText, File, Filter } from 'lucide-react';
+import { Truck, ChevronLeft, ChevronRight, Calendar, ChevronDown, RefreshCw, Download, FileSpreadsheet, FileText, File, Filter, Plus } from 'lucide-react';
 
 export default function Header({
   onRefresh,
@@ -7,7 +7,8 @@ export default function Header({
   onExport,
   showToast,
   isFilterOpen = false,
-  onToggleFilterPanel
+  onToggleFilterPanel,
+  onOpenNewDeliveryModal
 }) {
   const [exportOpen, setExportOpen] = useState(false);
   const [dateRangeText, setDateRangeText] = useState('01 Sep 2026 - 07 Sep 2026');
@@ -113,9 +114,21 @@ export default function Header({
           )}
         </button>
 
+        {/* Add Delivery Button */}
+        <button
+          type="button"
+          onClick={onOpenNewDeliveryModal}
+          className="flex items-center space-x-1.5 rounded-lg px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-xs font-bold text-white transition-all shadow-sm cursor-pointer hover:shadow-blue-500/25 shrink-0"
+          title="Add New Delivery (Single or Sheet)"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          <span>Add Delivery</span>
+        </button>
+
         {/* Export Button with Dropdown */}
         <div className="relative" ref={exportRef}>
           <button
+            type="button"
             onClick={() => setExportOpen(!exportOpen)}
             className="flex items-center space-x-1.5 border border-slate-200 rounded-lg px-3 py-1.5 bg-white text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
           >

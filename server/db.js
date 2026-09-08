@@ -84,12 +84,15 @@ export const db = {
     const record = {
       id,
       customer: newDelivery.customer || 'ABC Publishing',
-      file: newDelivery.file || `${id}_document.pdf`,
+      isbn: newDelivery.isbn || `978-0-${Math.floor(100000 + Math.random() * 900000)}-${Math.floor(10 + Math.random() * 90)}-${Math.floor(1 + Math.random() * 9)}`,
+      title: newDelivery.title || 'Untitled Production Book',
+      author: newDelivery.author || 'Editorial Board',
+      file: newDelivery.file || (newDelivery.title ? `${newDelivery.title.replace(/[^\w\d]/g, '_')}_${newDelivery.type || 'POD'}.pdf` : `${id}_document.pdf`),
       type: newDelivery.type || 'POD',
       qty: Number(newDelivery.qty) || 1,
-      date: newDelivery.date || '07 Sep 2026',
-      time: newDelivery.time || '12:00 PM',
-      deliveredBy: newDelivery.deliveredBy || 'Production Team',
+      date: newDelivery.date || '08 Sep 2026',
+      time: newDelivery.time || new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+      deliveredBy: newDelivery.deliveredBy || 'QC',
       status: newDelivery.status || 'Delivered',
       timestamp: Date.now()
     };
@@ -97,6 +100,36 @@ export const db = {
     data.deliveries.unshift(record);
     writeData(data);
     return record;
+  },
+
+  createBulkDeliveries: (records) => {
+    const data = readData();
+    const createdRecords = [];
+    const baseTime = Date.now();
+
+    records.forEach((item, idx) => {
+      const id = item.id || `DEL-${String(baseTime + idx).slice(-5)}`;
+      const record = {
+        id,
+        customer: item.customer || 'ABC Publishing',
+        isbn: item.isbn || `978-0-${Math.floor(100000 + Math.random() * 900000)}-${Math.floor(10 + Math.random() * 90)}-${Math.floor(1 + Math.random() * 9)}`,
+        title: item.title || `Production Volume ${idx + 1}`,
+        author: item.author || 'Editorial Board',
+        file: item.file || (item.title ? `${item.title.replace(/[^\w\d]/g, '_')}_${item.type || 'POD'}.pdf` : `${id}_document.pdf`),
+        type: item.type || 'POD',
+        qty: Number(item.qty) || 1,
+        date: item.date || '08 Sep 2026',
+        time: item.time || new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+        deliveredBy: item.deliveredBy || 'QC',
+        status: item.status || 'Delivered',
+        timestamp: baseTime + idx
+      };
+      createdRecords.push(record);
+      data.deliveries.unshift(record);
+    });
+
+    writeData(data);
+    return createdRecords;
   },
 
   updateDeliveryStatus: (id, status) => {

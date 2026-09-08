@@ -57,17 +57,31 @@ app.get('/api/deliveries/:id', (req, res) => {
   }
 });
 
-// POST /api/deliveries
+// POST /api/deliveries (single entry)
 app.post('/api/deliveries', (req, res) => {
   try {
-    const { customer, type, filesCount, pagesCount, channel, status, files } = req.body;
+    const { customer, type } = req.body;
     if (!customer || !type) {
       return res.status(400).json({ error: 'Customer and Type are required fields' });
     }
-    const created = db.createDelivery({ customer, type, filesCount, pagesCount, channel, status, files });
+    const created = db.createDelivery(req.body);
     res.status(201).json(created);
   } catch (err) {
     res.status(500).json({ error: 'Failed to create delivery record', message: err.message });
+  }
+});
+
+// POST /api/deliveries/bulk (sheet / excel / csv import)
+app.post('/api/deliveries/bulk', (req, res) => {
+  try {
+    const { deliveries } = req.body;
+    if (!Array.isArray(deliveries) || deliveries.length === 0) {
+      return res.status(400).json({ error: 'Deliveries array is required and must not be empty' });
+    }
+    const created = db.createBulkDeliveries(deliveries);
+    res.status(201).json({ success: true, count: created.length, deliveries: created });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to bulk import deliveries', message: err.message });
   }
 });
 

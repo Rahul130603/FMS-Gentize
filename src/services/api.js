@@ -35,6 +35,16 @@ export async function createDelivery(payload) {
   return res.json();
 }
 
+export async function createBulkDeliveries(deliveries) {
+  const res = await fetch(`${API_BASE}/deliveries/bulk`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ deliveries }),
+  });
+  if (!res.ok) throw new Error(`Failed to bulk import deliveries: ${res.statusText}`);
+  return res.json();
+}
+
 export async function updateDeliveryStatus(id, status) {
   const res = await fetch(`${API_BASE}/deliveries/${id}/status`, {
     method: 'PUT',

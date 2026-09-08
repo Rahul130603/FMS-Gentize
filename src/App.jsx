@@ -114,6 +114,8 @@ export default function App() {
   const [filters, setFilters] = useState({
     dateRange: 'week',
     selectedDate: '',
+    selectedWeek: null,
+    selectedMonth: '',
     type: 'all',
     customer: 'all',
     status: 'all',
@@ -121,14 +123,8 @@ export default function App() {
     sort: 'latest'
   });
 
-  // Toast Helper
-  const showToast = useCallback((message) => {
-    const id = Date.now() + Math.random();
-    setToasts((prev) => [...prev, { id, message }]);
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 2600);
-  }, []);
+  // Floating toast captions disabled per user request ("entha capiton la vena ahh")
+  const showToast = useCallback(() => {}, []);
 
   // Fetch all initial data from backend API with localStorage backup & smart merging
   const loadData = useCallback(async () => {
@@ -227,6 +223,8 @@ export default function App() {
     setFilters({
       dateRange: 'week',
       selectedDate: '',
+      selectedWeek: null,
+      selectedMonth: '',
       type: 'all',
       customer: 'all',
       status: 'all',
@@ -234,7 +232,6 @@ export default function App() {
       sort: 'latest'
     });
     setQuickDateScope('week');
-    showToast('Filters reset to default view.');
   };
 
   // =========================================================================
@@ -271,12 +268,27 @@ export default function App() {
       ) {
         return false;
       }
-      // Custom Chosen Date Filter
+      // 1. Custom Chosen Date Filter (Single Day)
       if (filters.selectedDate) {
         const targetDate = formatDateToMon(filters.selectedDate);
         if (item.date !== targetDate) return false;
-      } else {
-        // Preset Date Range filter
+      }
+      // 2. Specific Chosen Week Filter
+      else if (filters.selectedWeek) {
+        const { startDay, endDay, month } = filters.selectedWeek;
+        const dayMatch = (item.date || '').match(/^(\d{1,2})\s+([A-Za-z]{3})/);
+        if (!dayMatch) return false;
+        const dayNum = parseInt(dayMatch[1], 10);
+        const itemMonth = dayMatch[2];
+        if (month && itemMonth.toLowerCase() !== month.toLowerCase()) return false;
+        if (dayNum < startDay || dayNum > endDay) return false;
+      }
+      // 3. Specific Chosen Month Filter
+      else if (filters.selectedMonth) {
+        if (!item.date || !item.date.toLowerCase().includes(filters.selectedMonth.toLowerCase())) return false;
+      }
+      // 4. Preset Date Range filter
+      else {
         if (filters.dateRange === 'today') {
           if (!isTodayDate(item.date)) return false;
         } else if (filters.dateRange === 'yesterday') {
@@ -522,44 +534,44 @@ export default function App() {
   // Quick KPI Card Interactive Filter Handler
   const handleKpiCardClick = (type, value) => {
     if (type === 'dateRange') {
-      if (filters.dateRange === value && !filters.selectedDate) {
-        setFilters((prev) => ({ ...prev, dateRange: 'all', selectedDate: '' }));
-        showToast('Viewing All Deliveries');
+      if (filters.dateRange === value && !filters.selectedDate && !filters.selectedWeek && !filters.selectedMonth) {
+        setFilters((prev) => ({ ...prev, dateRange: 'all', selectedDate: '', selectedWeek: null, selectedMonth: '' }));
       } else {
-        setFilters((prev) => ({ ...prev, dateRange: value, selectedDate: '' }));
-        const label =
-          value === 'today'
-            ? `Today's Deliveries (${activeKpis.today})`
-            : value === 'week'
-            ? `This Week's Deliveries (${activeKpis.week})`
-            : `This Month's Deliveries (${activeKpis.month})`;
-        showToast(`📅 Filtered: ${label}`);
+        setFilters((prev) => ({ ...prev, dateRange: value, selectedDate: '', selectedWeek: null, selectedMonth: '' }));
       }
     } else if (type === 'status') {
       if (filters.status === value) {
         setFilters((prev) => ({ ...prev, status: 'all' }));
-        showToast('Status filter cleared (All Statuses)');
       } else {
         setFilters((prev) => ({ ...prev, status: value }));
-        showToast(`Filtered Status: ${value.toUpperCase()}`);
       }
     } else if (type === 'all') {
       setFilters((prev) => ({
         ...prev,
         dateRange: 'all',
         selectedDate: '',
+        selectedWeek: null,
+        selectedMonth: '',
         status: 'all',
         type: 'all',
         customer: 'all'
       }));
-      showToast('Showing All Production Records');
     }
   };
 
   const handleKpiCustomDate = (dateVal) => {
     if (!dateVal) return;
-    setFilters((prev) => ({ ...prev, selectedDate: dateVal, dateRange: 'custom' }));
-    showToast(`📅 Filtered Date: ${formatDateToMon(dateVal)}`);
+    setFilters((prev) => ({ ...prev, selectedDate: dateVal, selectedWeek: null, selectedMonth: '', dateRange: 'custom' }));
+  };
+
+  const handleSelectWeek = (weekItem) => {
+    if (!weekItem) return;
+    setFilters((prev) => ({ ...prev, selectedWeek: weekItem, selectedDate: '', selectedMonth: '', dateRange: 'custom' }));
+  };
+
+  const handleSelectMonth = (monthName) => {
+    if (!monthName) return;
+    setFilters((prev) => ({ ...prev, selectedMonth: monthName, selectedDate: '', selectedWeek: null, dateRange: 'custom' }));
   };
 
   // Header Refresh Action
@@ -658,9 +670,13 @@ export default function App() {
           kpis={activeKpis}
           activeDateRange={filters.dateRange}
           selectedDate={filters.selectedDate}
+          selectedWeek={filters.selectedWeek}
+          selectedMonth={filters.selectedMonth}
           activeStatus={filters.status}
           onSelectFilter={handleKpiCardClick}
           onSelectCustomDate={handleKpiCustomDate}
+          onSelectWeek={handleSelectWeek}
+          onSelectMonth={handleSelectMonth}
         />
 
         {/* 4. ROW 1: 3 PRODUCTION ANALYTICS CHARTS - Fully Reactive */}
@@ -737,9 +753,6 @@ export default function App() {
           showToast={showToast}
         />
       )}
-
-      {/* TOAST NOTIFICATION CONTAINER */}
-      <Toast toasts={toasts} />
     </div>
   );
 }
